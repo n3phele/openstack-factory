@@ -33,8 +33,8 @@ public class FactoryApp {
 		nodeCreationReq.hardwareId = "az-1.region-a.geo-1/100";
 		nodeCreationReq.imageId = "az-1.region-a.geo-1/75845";
 		nodeCreationReq.locationId = "az-1.region-a.geo-1";
-		nodeCreationReq.nodeCount = 3;
-		nodeCreationReq.securityGroup = "lis-nodes-new";
+		nodeCreationReq.nodeCount = 1;
+		nodeCreationReq.securityGroup = "lis-lis-nodes";
 
 		List<HPCloudServer> nodes = hpcManager.createServerRequest(nodeCreationReq);
 		for (HPCloudServer srv : nodes)

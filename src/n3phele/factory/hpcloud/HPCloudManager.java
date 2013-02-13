@@ -23,9 +23,13 @@ import org.jclouds.compute.domain.TemplateBuilder;
 import org.jclouds.domain.Location;
 import org.jclouds.enterprise.config.EnterpriseConfigurationModule;
 import org.jclouds.logging.slf4j.config.SLF4JLoggingModule;
-import org.jclouds.openstack.nova.NovaAsyncClient;
-import org.jclouds.openstack.nova.NovaClient;
+import org.jclouds.openstack.nova.v2_0.NovaApi;
 import org.jclouds.openstack.nova.v2_0.compute.options.NovaTemplateOptions;
+import org.jclouds.openstack.nova.v2_0.domain.Ingress;
+import org.jclouds.openstack.nova.v2_0.domain.IpProtocol;
+import org.jclouds.openstack.nova.v2_0.domain.SecurityGroup;
+import org.jclouds.openstack.nova.v2_0.domain.SecurityGroupRule;
+import org.jclouds.openstack.nova.v2_0.extensions.SecurityGroupApi;
 import org.jclouds.rest.RestContext;
 import org.jclouds.sshj.config.SshjSshClientModule;
 
@@ -37,7 +41,9 @@ import com.google.inject.Module;
  *
  */
 public class HPCloudManager {
-	ComputeService mCompute;
+	private ComputeService mCompute;
+	private RestContext mNova;
+	private NovaApi mNovaApi;
 	
 	public static String JCLOUD_PROVIDER = "hpcloud-compute";
 	
@@ -47,15 +53,14 @@ public class HPCloudManager {
 	 */
 	public HPCloudManager(HPCloudCredentials creds)
 	{
-		mCompute = initComputeService(creds.identity, creds.secretKey);
+		initComputeService(creds.identity, creds.secretKey);
 	}
 
 	/**
 	 * @param identity A join of TenantName and AccessKey with a ":" between them.
 	 * @param secretKey A key associated with AccessKey provided in identity parameter.
-	 * @return ComputeService component
 	 */
-	private ComputeService initComputeService(String identity, String secretKey)
+	private void initComputeService(String identity, String secretKey)
 	{
 		Properties properties = new Properties();
 		long scriptTimeout = TimeUnit.MILLISECONDS.convert(20, TimeUnit.MINUTES);
@@ -64,8 +69,12 @@ public class HPCloudManager {
 		Iterable<Module> modules = ImmutableSet.<Module> of(new SshjSshClientModule(), new SLF4JLoggingModule(), new EnterpriseConfigurationModule());
 
 		ContextBuilder builder = ContextBuilder.newBuilder(JCLOUD_PROVIDER).credentials(identity, secretKey).modules(modules).overrides(properties);
+		
+		ComputeServiceContext context = builder.buildView(ComputeServiceContext.class);
 
-		return builder.buildView(ComputeServiceContext.class).getComputeService();
+		mCompute = context.getComputeService();
+		mNova = context.unwrap();
+		mNovaApi = (NovaApi)mNova.getApi();
 	}
 	
 	/**
@@ -144,18 +153,26 @@ public class HPCloudManager {
 		templateBuilder.hardwareId( r.hardwareId );
 		
 		/**
-		 * TODO: NovaTemplateOptions is used because we need to set to auto generate keypairs...
-		 * Also, when you set the security groups here, they override the security group set on
-		 * createNodesInGroup function. Needs to verify correctly this behavior.
-		 * Security groups referred here needs to already exists and in createNodesInGroup they
-		 * are created if doesn't exists.
+		 * Create our security group with following ports opened:
+		 * TCP: 22, 8887
+		 * UDP: None
+		 * ICMP: Yes
+		 */
+		SecurityGroup secGroup = createSecurityGroup( r.securityGroup, r.locationId );
+		
+		/**
+		 * After we created our security group, we need to setup our options.
+		 * Here I define to our API create automatically an keyPair and put our nodes
+		 * into newly created security group.
 		 */
 		NovaTemplateOptions options = (NovaTemplateOptions)mCompute.templateOptions();
-		//options.securityGroupNames("default");
+		options.securityGroupNames(secGroup.getName());
 		options.generateKeyPair(true);
-		options.inboundPorts(22, 8887);
 		
-		templateBuilder.options(options);		
+		/**
+		 * Finally, we build our options.
+		 */
+		templateBuilder.options(options);
 		
 		ArrayList<HPCloudServer> serversList = new ArrayList<HPCloudServer>();
 		try
@@ -174,9 +191,28 @@ public class HPCloudManager {
 		return serversList;
 	}
 	
-	public void createSecurityGroup()
+	public SecurityGroup createSecurityGroup(String name, String zone)
 	{
-		RestContext<NovaClient, NovaAsyncClient> context = mCompute.getContext().getProviderSpecificContext();
-		NovaClient client = context.getApi();
+		SecurityGroupApi sgApi = mNovaApi.getSecurityGroupExtensionForZone(zone).get();
+		
+		String groupName = "n3phele-" + name;
+		SecurityGroup sg = sgApi.createWithDescription(groupName, "Created by n3phele.");
+		
+		/**
+		 * External rules
+		 */
+		sgApi.createRuleAllowingCidrBlock(sg.getId(), Ingress.builder().ipProtocol(IpProtocol.TCP).fromPort(22).toPort(22).build(), "0.0.0.0/0");
+		sgApi.createRuleAllowingCidrBlock(sg.getId(), Ingress.builder().ipProtocol(IpProtocol.TCP).fromPort(8887).toPort(8887).build(), "0.0.0.0/0");
+		sgApi.createRuleAllowingCidrBlock(sg.getId(), Ingress.builder().ipProtocol(IpProtocol.ICMP).fromPort(-1).toPort(-1).build(), "0.0.0.0/0");
+		
+		/**
+		 * Internal rules. Allowing nodes access each other.
+		 * TODO: It doesn't allow string, just integer, needs to verify how to do
+		 */
+		/*sgApi.createRuleAllowingSecurityGroupId(sg.getId(), Ingress.builder().ipProtocol(IpProtocol.TCP).fromPort(1).toPort(65535).build(), groupName);
+		sgApi.createRuleAllowingSecurityGroupId(sg.getId(), Ingress.builder().ipProtocol(IpProtocol.UDP).fromPort(1).toPort(65535).build(), groupName);
+		sgApi.createRuleAllowingSecurityGroupId(sg.getId(), Ingress.builder().ipProtocol(IpProtocol.ICMP).fromPort(-1).toPort(-1).build(), groupName);*/
+		
+		return sg;
 	}
 }

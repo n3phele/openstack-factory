@@ -9,32 +9,32 @@
 		<dependency>
 			<groupId>org.jclouds</groupId>
 			<artifactId>jclouds-compute</artifactId>
-			<version>1.5.0-beta.8</version>
+			<version>1.5.7</version>
 		</dependency>
 		<dependency>
 			<groupId>org.jclouds.provider</groupId>
 			<artifactId>aws-ec2</artifactId>
-			<version>1.5.0-beta.8</version>
+			<version>1.5.7</version>
 		</dependency>
 		<dependency>
 			<groupId>org.jclouds.provider</groupId>
 			<artifactId>hpcloud-objectstorage</artifactId>
-			<version>1.5.0-beta.8</version>
+			<version>1.5.7</version>
 		</dependency>
 		<dependency>
 			<groupId>org.jclouds.provider</groupId>
 			<artifactId>hpcloud-compute</artifactId>
-			<version>1.5.0-beta.8</version>
+			<version>1.5.7</version>
 		</dependency>
 		<dependency>
 			<groupId>org.jclouds.driver</groupId>
 			<artifactId>jclouds-sshj</artifactId>
-			<version>1.5.0-beta.8</version>
+			<version>1.5.7</version>
 		</dependency>
 		<dependency>
 			<groupId>org.jclouds.driver</groupId>
 			<artifactId>jclouds-enterprise</artifactId>
-			<version>1.5.0-beta.8</version>
+			<version>1.5.7</version>
 		</dependency>
 		<dependency>
 			<groupId>ch.qos.logback</groupId>
