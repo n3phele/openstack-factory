@@ -22,6 +22,7 @@ import org.jclouds.compute.domain.NodeMetadata;
 import org.jclouds.compute.domain.TemplateBuilder;
 import org.jclouds.domain.Location;
 import org.jclouds.enterprise.config.EnterpriseConfigurationModule;
+import org.jclouds.gae.config.AsyncGoogleAppEngineConfigurationModule;
 import org.jclouds.logging.slf4j.config.SLF4JLoggingModule;
 import org.jclouds.openstack.nova.v2_0.NovaApi;
 import org.jclouds.openstack.nova.v2_0.compute.options.NovaTemplateOptions;
@@ -53,7 +54,7 @@ public class HPCloudManager {
 	 */
 	public HPCloudManager(HPCloudCredentials creds)
 	{
-		initComputeService(creds.identity, creds.secretKey);
+		initComputeService(creds.getIdentity(), creds.getSecretKey());
 	}
 
 	/**
@@ -65,8 +66,9 @@ public class HPCloudManager {
 		Properties properties = new Properties();
 		long scriptTimeout = TimeUnit.MILLISECONDS.convert(20, TimeUnit.MINUTES);
 		properties.setProperty(TIMEOUT_SCRIPT_COMPLETE, scriptTimeout + "");
+		properties.setProperty("jclouds.modules","org.jclouds.gae.config.AsyncGoogleAppEngineConfigurationModule");
 
-		Iterable<Module> modules = ImmutableSet.<Module> of(new SshjSshClientModule(), new SLF4JLoggingModule(), new EnterpriseConfigurationModule());
+		Iterable<Module> modules = ImmutableSet.<Module> of(new SLF4JLoggingModule(), new AsyncGoogleAppEngineConfigurationModule());
 
 		ContextBuilder builder = ContextBuilder.newBuilder(JCLOUD_PROVIDER).credentials(identity, secretKey).modules(modules).overrides(properties);
 		
