@@ -51,9 +51,11 @@
 	<classpathentry kind="lib" path="testlibs/grizzly-rcm-1.9.45.jar"/>
 	<classpathentry kind="lib" path="testlibs/grizzly-servlet-webserver-1.9.45.jar"/>
 	<classpathentry kind="lib" path="testlibs/grizzly-utils-1.9.45.jar"/>
-	<classpathentry kind="lib" path="testlibs/jackson-all-1.9.11.jar"/>
 	<classpathentry kind="lib" path="testlibs/jersey-test-framework-core-1.17.jar"/>
 	<classpathentry kind="lib" path="testlibs/jersey-test-framework-grizzly-1.17.jar"/>
 	<classpathentry kind="lib" path="testlibs/servlet-api-2.5.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/jackson-all-1.9.11.jar"/>
+	<classpathentry kind="lib" path="testlibs/appengine-api-stubs.jar"/>
+	<classpathentry kind="lib" path="testlibs/appengine-testing.jar"/>
 	<classpathentry kind="output" path="war/WEB-INF/classes"/>
 </classpath>
