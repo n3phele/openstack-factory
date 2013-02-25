@@ -1,13 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="con" path="com.google.appengine.eclipse.core.GAE_CONTAINER"/>
+	<classpathentry kind="src" path="test"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/jre6"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/jersey-client-1.12.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/jersey-core-1.12.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/jersey-json-1.12.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/jersey-server-1.12.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/jersey-servlet-1.12.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jclouds-blobstore-1.5.7.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jclouds-bouncycastle-1.5.7.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jclouds-compute-1.5.7.jar"/>
@@ -18,7 +13,6 @@
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jclouds-scriptbuilder-1.5.7.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jclouds-slf4j-1.5.7.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jclouds-sshj-1.5.7.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/test_hpcloud.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/aopalliance-1.0.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/aws-common-1.5.7.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/aws-ec2-1.5.7.jar"/>
@@ -46,5 +40,22 @@
 	<classpathentry kind="lib" path="war/WEB-INF/lib/swift-1.5.7.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/rocoto-6.1.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jclouds-gae-1.5.7.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/jersey-bundle-1.17.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/asm-3.3.1.jar"/>
+	<classpathentry kind="con" path="com.google.appengine.eclipse.core.GAE_CONTAINER/v1"/>
+	<classpathentry kind="lib" path="testlibs/grizzly-framework-1.9.45.jar"/>
+	<classpathentry kind="lib" path="testlibs/grizzly-http-1.9.45.jar"/>
+	<classpathentry kind="lib" path="testlibs/grizzly-http-servlet-1.9.45.jar"/>
+	<classpathentry kind="lib" path="testlibs/grizzly-portunif-1.9.45.jar"/>
+	<classpathentry kind="lib" path="testlibs/grizzly-rcm-1.9.45.jar"/>
+	<classpathentry kind="lib" path="testlibs/grizzly-servlet-webserver-1.9.45.jar"/>
+	<classpathentry kind="lib" path="testlibs/grizzly-utils-1.9.45.jar"/>
+	<classpathentry kind="lib" path="testlibs/jersey-test-framework-core-1.17.jar"/>
+	<classpathentry kind="lib" path="testlibs/jersey-test-framework-grizzly-1.17.jar"/>
+	<classpathentry kind="lib" path="testlibs/servlet-api-2.5.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/jackson-all-1.9.11.jar"/>
+	<classpathentry kind="lib" path="testlibs/appengine-api-stubs.jar"/>
+	<classpathentry kind="lib" path="testlibs/appengine-testing.jar"/>
 	<classpathentry kind="output" path="war/WEB-INF/classes"/>
 </classpath>
