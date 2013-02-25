@@ -154,14 +154,14 @@ public class HPCloudManager {
 	 * @param zone 
 	 * @param nodeId our node identification.
 	 */
-	public void terminateNode(String zone, String nodeId)
+	public boolean terminateNode(String zone, String nodeId)
 	{
 		/**
 		 * Get server async api
 		 */
 		ServerApi serverApi = mNovaApi.getServerApiForZone(zone);
 		
-		serverApi.delete(nodeId);
+		return serverApi.delete(nodeId);
 	}
 	
 	/**
