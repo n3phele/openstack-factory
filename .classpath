@@ -57,5 +57,7 @@
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jackson-all-1.9.11.jar"/>
 	<classpathentry kind="lib" path="testlibs/appengine-api-stubs.jar"/>
 	<classpathentry kind="lib" path="testlibs/appengine-testing.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/n3phele-shared-with-factory.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/objectify-3.1.jar"/>
 	<classpathentry kind="output" path="war/WEB-INF/classes"/>
 </classpath>
