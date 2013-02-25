@@ -14,27 +14,25 @@ import java.util.concurrent.TimeUnit;
 import org.jclouds.ContextBuilder;
 import org.jclouds.compute.ComputeService;
 import org.jclouds.compute.ComputeServiceContext;
-import org.jclouds.compute.RunNodesException;
 import org.jclouds.compute.domain.ComputeMetadata;
 import org.jclouds.compute.domain.Hardware;
 import org.jclouds.compute.domain.Image;
-import org.jclouds.compute.domain.NodeMetadata;
-import org.jclouds.compute.domain.TemplateBuilder;
 import org.jclouds.domain.Location;
-import org.jclouds.enterprise.config.EnterpriseConfigurationModule;
 import org.jclouds.gae.config.AsyncGoogleAppEngineConfigurationModule;
 import org.jclouds.logging.slf4j.config.SLF4JLoggingModule;
 import org.jclouds.openstack.nova.v2_0.NovaApi;
-import org.jclouds.openstack.nova.v2_0.compute.options.NovaTemplateOptions;
 import org.jclouds.openstack.nova.v2_0.domain.Ingress;
 import org.jclouds.openstack.nova.v2_0.domain.IpProtocol;
 import org.jclouds.openstack.nova.v2_0.domain.KeyPair;
+import org.jclouds.openstack.nova.v2_0.domain.RebootType;
 import org.jclouds.openstack.nova.v2_0.domain.SecurityGroup;
-import org.jclouds.openstack.nova.v2_0.domain.SecurityGroupRule;
+import org.jclouds.openstack.nova.v2_0.domain.Server;
+import org.jclouds.openstack.nova.v2_0.domain.ServerCreated;
 import org.jclouds.openstack.nova.v2_0.extensions.KeyPairApi;
 import org.jclouds.openstack.nova.v2_0.extensions.SecurityGroupApi;
+import org.jclouds.openstack.nova.v2_0.features.ServerApi;
+import org.jclouds.openstack.nova.v2_0.options.CreateServerOptions;
 import org.jclouds.rest.RestContext;
-import org.jclouds.sshj.config.SshjSshClientModule;
 
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableSet;
@@ -123,24 +121,6 @@ public class HPCloudManager {
 	 * @param nodeId
 	 *            our node identification.
 	 */
-	public void rebootNode(String nodeId)
-	{
-		mCompute.rebootNode(nodeId);
-	}
-
-	/**
-	 * @param nodeId
-	 *            our node identification.
-	 */
-	public void terminateNode(String nodeId)
-	{
-		mCompute.destroyNode(nodeId);
-	}
-
-	/**
-	 * @param nodeId
-	 *            our node identification.
-	 */
 	public void suspendNode(String nodeId)
 	{
 		mCompute.suspendNode(nodeId);
@@ -154,56 +134,101 @@ public class HPCloudManager {
 	{
 		mCompute.resumeNode(nodeId);
 	}
+	
+	/**
+	 * @param zone
+	 * @param nodeId our node identification.
+	 * @param rebootType 
+	 */
+	public void rebootNode(String zone, String nodeId, RebootType rebootType)
+	{
+		/**
+		 * Get server async api
+		 */
+		ServerApi serverApi = mNovaApi.getServerApiForZone(zone);
+		
+		serverApi.reboot(nodeId, rebootType);
+	}
+
+	/**
+	 * @param zone 
+	 * @param nodeId our node identification.
+	 */
+	public void terminateNode(String zone, String nodeId)
+	{
+		/**
+		 * Get server async api
+		 */
+		ServerApi serverApi = mNovaApi.getServerApiForZone(zone);
+		
+		serverApi.delete(nodeId);
+	}
+	
+	/**
+	 * 
+	 * @param zone Compute zone
+	 * @param Id Server Id
+	 * @return Server object
+	 */
+	public Server getServerById(String zone, String Id)
+	{
+		/**
+		 * Get server async api
+		 */
+		ServerApi serverApi = mNovaApi.getServerApiForZone(zone);
+		
+		return serverApi.get(Id);
+	}
 
 	/**
 	 * @param r
 	 *            Represents our creation request
 	 * @return a list of created nodes.
 	 */
-	public List<HPCloudServer> createServerRequest(HPCloudCreateServerRequest r)
+	public List<ServerCreated> createServerRequest(HPCloudCreateServerRequest r)
 	{
-		TemplateBuilder templateBuilder = mCompute.templateBuilder();
-		templateBuilder.imageId(r.imageId);
-		templateBuilder.locationId(r.locationId);
-		templateBuilder.hardwareId(r.hardwareId);
-
+		/**
+		 * Get server async api
+		 */
+		ServerApi serverApi = mNovaApi.getServerApiForZone(r.locationId);
+		
 		/**
 		 * Create our security group with following ports opened: TCP: 22, 8887
 		 * UDP: None ICMP: Yes
 		 */
 		SecurityGroup secGroup = createSecurityGroup(r.securityGroup, r.locationId);
-
+		
 		/**
-		 * After we created our security group, we need to setup our options.
-		 * Here I define to our API create automatically an keyPair and put our
-		 * nodes into newly created security group.
-		 * 
-		 * TODO: Create KeyPair manually to have a better management.
+		 * Create our keypair. Return existent keypair if already exists.
 		 */
-		NovaTemplateOptions options = (NovaTemplateOptions) mCompute.templateOptions();
+		KeyPair keyPair = createKeyPair(r.keyPair, r.locationId);
+		
+		/**
+		 * Build our server creation options.
+		 */
+		CreateServerOptions options = new CreateServerOptions();
 		options.securityGroupNames(secGroup.getName());
-		options.generateKeyPair(true);
-
+		options.keyPairName(keyPair.getName());
+		
 		/**
-		 * Finally, we build our options.
+		 * Send our requests to HPCloud
 		 */
-		templateBuilder.options(options);
-
-		ArrayList<HPCloudServer> serversList = new ArrayList<HPCloudServer>();
-		try
+		ArrayList<ServerCreated> serversList = new ArrayList<ServerCreated>();
+		
+		for(int i=0; i < r.nodeCount; i++)
 		{
-			Set<? extends NodeMetadata> nodes = mCompute.createNodesInGroup(r.securityGroup, r.nodeCount, templateBuilder.build());
-			for (NodeMetadata n : nodes)
-			{
-				HPCloudServer hpsrv = new HPCloudServer(n.getId(), n.getName(), n.getImageId(), n.getProviderId(), n.getHardware().getId(), n.getLocation().getId(), n.getBackendStatus(), n.getCredentials().getPrivateKey());
-				serversList.add(hpsrv);
-			}
-		} catch (RunNodesException e)
-		{
-			// TODO: What us are expected to do here?
+			String name = "n3phele-" + r.serverName;
+			if( r.nodeCount > 1 )
+				name = name.concat("-" + String.valueOf(i));
+			
+			ServerCreated server = serverApi.create(name, r.imageId, r.hardwareId, options);
+			serversList.add(server);
+			
+			//HPCloudServer hpsrv = new HPCloudServer(server.getId(), server.getName());
+			//serversList.add(hpsrv);
 		}
 
-		return serversList;
+		return (serversList.size() > 0) ? serversList : null;
 	}
 
 	public SecurityGroup createSecurityGroup(String name, String zone)
