@@ -211,13 +211,20 @@ public class HPCloudManager {
 		options.keyPairName(keyPair.getName());
 		
 		/**
+		 * Custom commands
+		 */
+		if( r.userData.length() > 0 )
+			options.userData(r.userData.getBytes());
+		
+		/**
 		 * Send our requests to HPCloud
 		 */
 		ArrayList<ServerCreated> serversList = new ArrayList<ServerCreated>();
 		
 		for(int i=0; i < r.nodeCount; i++)
 		{
-			String name = "n3phele-" + r.serverName;
+			String name = r.serverName;
+			//String name = "n3phele-" + r.serverName;
 			if( r.nodeCount > 1 )
 				name = name.concat("-" + String.valueOf(i));
 			

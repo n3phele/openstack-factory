@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -54,6 +55,13 @@ import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 
+import org.jclouds.openstack.nova.v2_0.domain.ServerCreated;
+import org.jclouds.openstack.v2_0.domain.Link;
+
+import n3phele.factory.hpcloud.HPCloudCreateServerRequest;
+import n3phele.factory.hpcloud.HPCloudCreateServerResponse;
+import n3phele.factory.hpcloud.HPCloudCredentials;
+import n3phele.factory.hpcloud.HPCloudManager;
 import n3phele.factory.model.ServiceModelDao;
 import n3phele.security.EncryptedAWSCredentials;
 import n3phele.service.core.Resource;
@@ -204,8 +212,6 @@ public class VirtualServerResource {
 		return outputParameters;
 	}
 	
-	
-	
 
 	/** create one or more new virtual servers. When multiple virtual servers are created, the siblings field of the virtualServer
 	 * object contains the URIs of all created virtual servers including that virtual server itself. 
@@ -220,35 +226,113 @@ public class VirtualServerResource {
 	@Produces("application/json")
 	@RolesAllowed("authenticated")
 	@Path("virtualServer")
-	public Response create(ExecutionFactoryCreateRequest r) throws Exception {
-
-		if(r.location == null) {
-			r.location = URI.create("http://ec2.amazonaws.com");
-			log.warning("Assuming default location of "+r.location);
+	public Response create(ExecutionFactoryCreateRequest r) throws Exception
+	{
+		int minCount = 1;
+		int maxCount = 1;
+		HPCloudCreateServerRequest hpcRequest = new HPCloudCreateServerRequest();
+		HPCloudManager hpcManager = new HPCloudManager( new HPCloudCredentials(r.accessKey, r.encryptedSecret) );
+		
+		if( "zombie".equalsIgnoreCase(r.name) || "debug".equalsIgnoreCase(r.name) )
+		{
+			r.name = r.name.toUpperCase();
 		}
 		
-		List<VirtualServer> result = null;
-		if(r.idempotencyKey != null && r.idempotencyKey != "") {
-			result = getByIdempotencyKey(r.idempotencyKey);
+		if( !r.name.startsWith("n3phele-") )
+		{
+			r.name = "n3phele-" + r.name;
 		}
 		
-		if(result != null && result.size() > 0) {
-			log.severe("Found existing entries for idempotency key "+r.idempotencyKey);
-		} else {
-			if("zombie".equalsIgnoreCase(r.name) || "debug".equalsIgnoreCase(r.name)) {
-				r.name = r.name.toUpperCase();
+		for(NameValue p : r.parameters)
+		{
+			if(p.getKey().equalsIgnoreCase("minCount"))
+			{
+				String value = p.getValue();
+				try {
+					minCount = Integer.valueOf(value);
+					if(minCount <= 0) minCount = 1;
+				} catch (Exception e) {
+					
+				}
 			}
-			result = createVM(r.name, r.description, r.location,
-					r.parameters, r.notification, r.accessKey, r.encryptedSecret, r.owner, r.idempotencyKey);
+			
+			if(p.getKey().equalsIgnoreCase("maxCount"))
+			{
+				String value = p.getValue();
+				try {
+					maxCount = Integer.valueOf(value);
+					if(maxCount <=0) maxCount = 1;
+				} catch (Exception e) {
+					
+				}
+			}
+			
+			if(p.getKey().equalsIgnoreCase("imageId"))
+			{
+				hpcRequest.imageId = p.getValue();
+			}
+			
+			if(p.getKey().equalsIgnoreCase("instanceType"))
+			{
+				hpcRequest.hardwareId = p.getValue();
+			}
+			
+			if(p.getKey().equalsIgnoreCase("securityGroups"))
+			{
+				hpcRequest.securityGroup = p.getValue();
+			}
+			
+			if(p.getKey().equalsIgnoreCase("userData"))
+			{
+				hpcRequest.userData = p.getValue();
+			}
 		}
-		List<URI> vmRefs = new ArrayList<URI>(result.size());
-
-		log.info("Created " + result.size()+" VMs");
-		for(VirtualServer v : result) {
-			log.info("VM is "+v.getUri());
-			vmRefs.add(v.getUri());
+		
+		if(minCount > maxCount)
+		{
+			maxCount = minCount;
 		}
-		return Response.created(result.get(0).getUri()).entity(new CreateVirtualServerResponse(vmRefs)).build();
+		
+		//FIXME: Get zone from parameter
+		hpcRequest.locationId = "az-1.region-a.geo-1";
+		hpcRequest.nodeCount  = maxCount;
+		hpcRequest.keyPair    = r.name;
+		hpcRequest.serverName = r.name;
+		
+		//FIXME: Server names must be unique, maybe set this as a metadata?
+		/*if("zombie".equalsIgnoreCase(r.name) || "debug".equalsIgnoreCase(r.name))
+		{
+			r.name = r.name.toUpperCase();
+		}*/
+		
+		List<ServerCreated> resultList = hpcManager.createServerRequest(hpcRequest);
+		List<URI> uriList = new ArrayList<URI>(resultList.size());
+		ArrayList<String> siblings = new ArrayList<String>(resultList.size());
+		
+		Date epoch = new Date();
+		for(ServerCreated srv : resultList)
+		{
+			Set<Link> links = srv.getLinks();
+			for(Link link : links)
+			{
+				if( link.getRelation().equals("self") )
+				{
+					uriList.add(link.getHref());
+					siblings.add(link.getHref().toString());
+					break;
+				}
+			}
+		}
+		
+		for(ServerCreated srv : resultList)
+		{	
+			VirtualServer item = new VirtualServer( srv.getName(), r.description, r.location, r.parameters, r.notification, r.accessKey, r.encryptedSecret, r.owner, r.idempotencyKey );
+			item.setCreated(epoch);
+			item.setSiblings(siblings);
+			add(item);
+		}
+		
+		return Response.created(uriList.get(0)).entity(new HPCloudCreateServerResponse(uriList)).build();
 	}
 
 	/** Get details of a specific virtual server. This operation does a deep get, getting information from the cloud before

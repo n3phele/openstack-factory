@@ -9,6 +9,7 @@ public class HPCloudCreateServerRequest {
 	public String	locationId;
 	public String	keyPair;
 	public String	serverName;
+	public String	userData;
 
 	public String	securityGroup;
 
