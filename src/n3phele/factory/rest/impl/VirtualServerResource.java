@@ -54,6 +54,8 @@ import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 
+import n3phele.factory.hpcloud.HPCloudCredentials;
+import n3phele.factory.hpcloud.HPCloudManager;
 import n3phele.factory.model.ServiceModelDao;
 import n3phele.security.EncryptedAWSCredentials;
 import n3phele.service.core.Resource;
@@ -402,15 +404,17 @@ public class VirtualServerResource {
 
 		String instanceId = item.getInstanceId();
 		try {
-			//TODO implement this using jcloud
-			/*AmazonEC2 client = null;
-			client = getEC2Client(item.getAccessKey(),
-					item.getEncryptedKey(), item.getLocation());		
+			
+			
+			HPCloudCredentials credentials = new HPCloudCredentials(item.getAccessKey(),item.getEncryptedKey());
+			HPCloudManager hpManager = new HPCloudManager(credentials);	
 			item.setInstanceId(null);
 			item.setZombie(true);
 			updateStatus(item, "Terminated",  reference, sequence);
 			update(item);
-
+			
+			//TODO implement tags
+			/*
 			try {
 				client.createTags(new CreateTagsRequest()
 						.withResources(instanceId)
@@ -503,69 +507,11 @@ public class VirtualServerResource {
 		//TODO implement this using jcloud
 		/*AmazonEC2Client client = null;
 		client = getEC2Client(item.getAccessKey(), item.getEncryptedKey(),
-				item.getLocation());
+				item.getLocation());*/
+		
 		String instanceId = item.getInstanceId();
 		boolean madeIntoZombie = item.isZombie();
-		if (!madeIntoZombie && (instanceId == null || instanceId.length() == 0)) {
-			String spotId = item.getSpotId();
-			if(spotId == null || spotId.length()==0) {
-				if("Initializing".equals(item.getStatus())) {
-					// Update has been called on an item under construction -- ignore
-					log.warning("Ignoring partially formed item "+item.getUri());
-					return;
-				} else {
-					log.severe("Improper item "+item);
-				}
-			}
-
-			DescribeSpotInstanceRequestsResult update = null;
-			try {
-				update = client.describeSpotInstanceRequests(new DescribeSpotInstanceRequestsRequest()
-						.withSpotInstanceRequestIds(spotId));
-			} catch (AmazonServiceException e) {
-				log.log(Level.WARNING, "EC2 error "+e.getErrorCode(), e);
-				throw new WebApplicationException(e, Status.BAD_REQUEST);
-			}
-			instanceId = update.getSpotInstanceRequests().get(0).getInstanceId();
-			item.setInstanceId(instanceId);
-			//
-			//	After cleaning up an object, we leave it around with status == TERMINATED
-			// for one refresh so that others can see the state chance via polling.
-			// If we come across an object with state terminated, and the underlying object
-			// is canceled or closed, then this is the second time the item has been
-			// refreshed, so now we remove the object.
-			//
-			if((instanceId == null || instanceId.length()==0) // pure spot request
-			 && item.getStatus().equalsIgnoreCase(InstanceStateName.Terminated.toString()) 
-			 && (update.getSpotInstanceRequests().get(0).getState().equalsIgnoreCase("cancelled") ||
-					 update.getSpotInstanceRequests().get(0).getState().equals("closed"))) {
-				 delete(item);
-				 return;
-			 }
-			
-			updateStatus(item, update.getSpotInstanceRequests().get(0).getState(), reference, sequence);
-			update(item);
-			if(item.getStatus().equals("cancelled")) {
-				log.warning("Spot Instance " + item.getUri()+ " cancelled .. purging");
-				try {
-					deleteInstance(item, reference, sequence); //will set object to terminated
-				} catch (Exception e) {
-					log.log(Level.SEVERE, "Failed to clean up cancelled spot instance", e);
-					updateStatus(item, InstanceStateName.Terminated.toString(), reference, sequence);
-					delete(item);
-					return;
-				}
-
-			}
-			if(item.getStatus().equals("closed") && ((item.getInstanceId() == null) || (item.getInstanceId().length() == 0))) {
-				log.warning("Spot Instance " + item.getUri()
-						+ " not fulfilled .. purging");
-				updateStatus(item, InstanceStateName.Terminated.toString(),  reference, sequence);
-				delete(item);
-				return;
-			}
-
-		}
+		
 		if (madeIntoZombie) {
 			if (updateStatus(item, "terminated", reference, sequence))
 				update(item);
@@ -574,7 +520,8 @@ public class VirtualServerResource {
 				delete(item);
 				return;
 			}
-			
+		}
+			/*
 		} else if (instanceId != null && instanceId.length() > 0) {
 			DescribeInstancesResult update = client
 					.describeInstances(new DescribeInstancesRequest()
@@ -722,41 +669,26 @@ public class VirtualServerResource {
 
 		String instanceId = item.getInstanceId();
 		try {
-			String spotId = item.getSpotId();
-			boolean isSpotImage = (spotId != null) && spotId.length() != 0;
-			if(isSpotImage) {
-				try {
-					cancelSpotVMRequest(item);
-				} catch (Exception e) {
-					// ignore
-				}
-			}
-
+			
 			if (!item.getStatus().equalsIgnoreCase("Terminated")
 					&& instanceId != null && instanceId.length() > 0) {
-				//TODO implement this using jcloud
-				/*AmazonEC2 client = null;
-				client = getEC2Client(item.getAccessKey(),
-						item.getEncryptedKey(), item.getLocation());
-				TerminateInstancesResult result = client
-						.terminateInstances((new TerminateInstancesRequest())
-								.withInstanceIds(instanceId));
-				if(result.getTerminatingInstances().size()==0) { // Openstack
-					log.warning("Termination returned "+result);
+				
+				HPCloudCredentials credentials = new HPCloudCredentials(item.getAccessKey(),item.getEncryptedKey());
+				HPCloudManager hpManager = new HPCloudManager(credentials);
+				
+				//FIXME: get zone from parameter
+				boolean result = hpManager.terminateNode("az-1.region-a.geo-1", item.getInstanceId());
+				
+				if(result){
+					log.warning("Instance "+item.getInstanceId() + "deleted");
 					if (updateStatus(item, "Terminated",  reference, sequence)) {
 						update(item);
 					}
-				} else {
-					InstanceState now = result.getTerminatingInstances().get(0)
-							.getCurrentState();
-					InstanceState previous = result.getTerminatingInstances()
-							.get(0).getPreviousState();
-					log.warning("Deleting instanceId " + instanceId + " from "
-							+ previous + " now " + now);
-					if (updateStatus(item, now.getName(), reference, sequence)) {
-						update(item);
-					}
-				}*/
+				}
+				else{
+					log.warning("Instance "+item.getInstanceId() + "could not be deleted");
+				}
+				
 			} else {
 				if (updateStatus(item, "Terminated",  reference, sequence)) {
 					update(item);
