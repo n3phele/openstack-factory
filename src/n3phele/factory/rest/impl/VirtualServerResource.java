@@ -55,18 +55,14 @@ import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 
-<<<<<<< HEAD
-=======
 import org.jclouds.openstack.nova.v2_0.domain.ServerCreated;
 import org.jclouds.openstack.v2_0.domain.Link;
 
 import n3phele.factory.hpcloud.HPCloudCreateServerRequest;
 import n3phele.factory.hpcloud.HPCloudCreateServerResponse;
->>>>>>> cbb785344edf293aa92946bacc3f06579a1b9712
 import n3phele.factory.hpcloud.HPCloudCredentials;
 import n3phele.factory.hpcloud.HPCloudManager;
 import n3phele.factory.model.ServiceModelDao;
-import n3phele.security.EncryptedAWSCredentials;
 import n3phele.service.core.Resource;
 import n3phele.service.model.core.AbstractManager;
 import n3phele.service.model.core.BaseEntity;
