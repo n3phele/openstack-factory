@@ -217,6 +217,12 @@ public class HPCloudManager {
 			options.userData(r.userData.getBytes());
 		
 		/**
+		 * Append n3phele prefix
+		 */
+		if( !r.serverName.startsWith("n3phele-") )
+			r.serverName = "n3phele-" + r.serverName;
+		
+		/**
 		 * Send our requests to HPCloud
 		 */
 		ArrayList<ServerCreated> serversList = new ArrayList<ServerCreated>();
@@ -224,15 +230,15 @@ public class HPCloudManager {
 		for(int i=0; i < r.nodeCount; i++)
 		{
 			String name = r.serverName;
-			//String name = "n3phele-" + r.serverName;
+			
+			/**
+			 * If we're building more than one server, append a number into name
+			 */
 			if( r.nodeCount > 1 )
 				name = name.concat("-" + String.valueOf(i));
 			
 			ServerCreated server = serverApi.create(name, r.imageId, r.hardwareId, options);
 			serversList.add(server);
-			
-			//HPCloudServer hpsrv = new HPCloudServer(server.getId(), server.getName());
-			//serversList.add(hpsrv);
 		}
 
 		return (serversList.size() > 0) ? serversList : null;
@@ -242,7 +248,12 @@ public class HPCloudManager {
 	{
 		SecurityGroup sg = null;
 		SecurityGroupApi sgApi = mNovaApi.getSecurityGroupExtensionForZone(zone).get();
-		String groupName = "n3phele-" + name;
+		String groupName;
+		
+		if( !name.startsWith("n3phele-") )
+			groupName = "n3phele-" + name;
+		else
+			groupName = name;
 
 		try
 		{
@@ -288,8 +299,13 @@ public class HPCloudManager {
 	public KeyPair createKeyPair(String name, String zone)
 	{
 		KeyPairApi kpApi = mNovaApi.getKeyPairExtensionForZone(zone).get();
-		String kpName = "n3phele-" + name;
+		String kpName;
 		KeyPair kp = null;
+		
+		if( !name.startsWith("n3phele-") )
+			kpName = "n3phele-" + name;
+		else
+			kpName = name;
 
 		try
 		{

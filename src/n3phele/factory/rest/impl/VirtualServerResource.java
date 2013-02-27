@@ -55,6 +55,7 @@ import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 
+import org.jclouds.openstack.v2_0.domain.Link.Relation;
 import org.jclouds.openstack.nova.v2_0.domain.ServerCreated;
 import org.jclouds.openstack.v2_0.domain.Link;
 
@@ -285,6 +286,11 @@ public class VirtualServerResource {
 			{
 				hpcRequest.userData = p.getValue();
 			}
+			
+			if(p.getKey().equalsIgnoreCase("locationId"))
+			{
+				hpcRequest.locationId = p.getValue();
+			}
 		}
 		
 		if(minCount > maxCount)
@@ -292,8 +298,6 @@ public class VirtualServerResource {
 			maxCount = minCount;
 		}
 		
-		//FIXME: Get zone from parameter
-		hpcRequest.locationId = "az-1.region-a.geo-1";
 		hpcRequest.nodeCount  = maxCount;
 		hpcRequest.keyPair    = r.name;
 		hpcRequest.serverName = r.name;
@@ -314,7 +318,7 @@ public class VirtualServerResource {
 			Set<Link> links = srv.getLinks();
 			for(Link link : links)
 			{
-				if( link.getRelation().equals("self") )
+				if( link.getRelation() == Relation.SELF )
 				{
 					uriList.add(link.getHref());
 					siblings.add(link.getHref().toString());
@@ -1591,6 +1595,7 @@ public class VirtualServerResource {
 		new TypedParameter("keyName", "Name of the SSH key to be used for communication with the VM", ParameterType.String, "", ""),
 		new TypedParameter("minCount", "Minimum number of instances to launch. If the value is more than Amazon EC2 can launch, no instances are launched at all.", ParameterType.Long, "", "1"),
 		new TypedParameter("maxCount", "Maximum number of instances to launch. If the value is more than Amazon EC2 can launch, the largest possible number above minCount will be launched instead.", ParameterType.Long, "", "1"),
+		new TypedParameter("locationId", "Unique ID of hpcloud zone. Valid Values: az-1.region-a.geo-1 | az-2.region-a.geo-1 | az-3.region-a.geo-1", ParameterType.String, "", ""),
 		new TypedParameter("monitoring", "Specifies whether monitoring is enabled for the instance.", ParameterType.Boolean, "", "false"),
 		new TypedParameter("securityGroups", "Name of the security group which controls the open TCP/IP ports for the VM.", ParameterType.String, "", ""),
 		new TypedParameter("spotPrice", "Maximum hourly price for instance. If not specified then an on-demand instance is used", ParameterType.Double, "", ""),
