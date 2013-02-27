@@ -57,6 +57,7 @@ import javax.ws.rs.core.UriInfo;
 
 import org.jclouds.openstack.v2_0.domain.Link.Relation;
 import org.jclouds.openstack.nova.v2_0.domain.KeyPair;
+import org.jclouds.openstack.nova.v2_0.domain.SecurityGroup;
 import org.jclouds.openstack.nova.v2_0.domain.ServerCreated;
 import org.jclouds.openstack.v2_0.domain.Link;
 
@@ -139,32 +140,31 @@ public class VirtualServerResource {
 			@FormParam("secret") String secret,
 			@FormParam("key") String key,
 			@FormParam("location") URI location,
+			@FormParam("locationId") String locationId,
 			@FormParam("email") String email,
 			@FormParam("firstName") String firstName,
 			@FormParam("lastName") String lastName,
 			@FormParam("securityGroup") String securityGroup) {
 
 		//TODO implement this using jcloud
-		/*log.info("accountTest with fix " + fix);
-		if(fix && (email == null || email.trim().length() == 0) || (firstName == null || firstName.trim().length()== 0)
-				|| (lastName == null || lastName.trim().length() == 0))
+		log.info("accountTest with fix " + fix);
+		if(fix && (email == null || email.trim().length() == 0) || (firstName == null || firstName.trim().length()== 0)	|| (lastName == null || lastName.trim().length() == 0))
 			throw new IllegalArgumentException("email details must be supplied with option to fix");
-		boolean resultKey = checkKey(key, id, secret, location);
+		/*boolean resultKey = checkKey(key, id, secret, location);
 		if(!resultKey && fix) {
 			resultKey = createKey(key, id, secret, location, email, firstName, lastName);
-		}
-		boolean result = checkSecurityGroup(securityGroup, id, secret, location);
+		}*/
+		boolean result = checkSecurityGroup(securityGroup, id, secret, location, locationId);
 		if(!result && fix) {
-			result = makeSecurityGroup(securityGroup, id, secret, location, email, firstName, lastName);
+			result = makeSecurityGroup(securityGroup, id, secret, location, email, firstName, lastName, locationId);
 		}
 		
 		String reply = "";
-		if(!resultKey) 
-			reply = "KeyPair "+key+" does not exist"+(fix?" and could not be created.\n":"\n");
+		/*if(!resultKey) 
+			reply = "KeyPair "+key+" does not exist"+(fix?" and could not be created.\n":"\n");*/
 		if(!result) 
 			reply = "Security group "+securityGroup+" does not exist"+(fix?" and could not be created.\n":"\n");
-		return reply;*/
-		return "";
+		return reply;
 	}
 
 	
@@ -234,6 +234,7 @@ public class VirtualServerResource {
 		HPCloudCreateServerRequest hpcRequest = new HPCloudCreateServerRequest();
 		HPCloudManager hpcManager = new HPCloudManager( new HPCloudCredentials(r.accessKey, r.encryptedSecret) );
 		
+		//TODO: Fix 'zombie' and 'debug' implementation
 		if( "zombie".equalsIgnoreCase(r.name) || "debug".equalsIgnoreCase(r.name) )
 		{
 			r.name = r.name.toUpperCase();
@@ -1290,26 +1291,12 @@ public class VirtualServerResource {
 			}
 	}*/
 
-	//TODO implement this using jcloud
-	/*private boolean checkSecurityGroup(String groupName, String id, String secret, URI location) {
-		AmazonEC2Client client = null;
-		client = getEC2Client(id, secret, location);
-		boolean found = true;
-		try {
-			DescribeSecurityGroupsResult response = client.describeSecurityGroups(new DescribeSecurityGroupsRequest().withGroupNames("n3phele-"+groupName));
-			if(response.getSecurityGroups() == null || response.getSecurityGroups().isEmpty()) {
-				log.warning("No groups found");
-				found = false;
-			} else {
-				log.warning("Found "+response.getSecurityGroups().size()+" "+response.getSecurityGroups().toString());
-			}
-		} catch (Exception e) {
-			log.severe("Check security group exception "+e.getMessage());
-			found = false;
-		}
-
-		return found;
-	}*/
+	private boolean checkSecurityGroup(String groupName, String id, String secret, URI location, String locationId)
+	{
+		HPCloudManager hpcManager = new HPCloudManager( new HPCloudCredentials(id, secret) );
+		
+		return hpcManager.checkSecurityGroup(groupName, locationId);
+	}
 	
 	public void sendSecurityGroupNotificationEmail(String securityGroup, String to, String firstName, String lastName, URI location) {
 		try {
@@ -1332,9 +1319,7 @@ public class VirtualServerResource {
 
 				Message msg = new MimeMessage(session);
 				msg.setFrom(new InternetAddress("n3phele@gmail.com", "n3phele"));
-				msg.addRecipient(Message.RecipientType.TO,
-						new InternetAddress(to, firstName
-								+ " " + lastName));
+				msg.addRecipient(Message.RecipientType.TO, new InternetAddress(to, firstName + " " + lastName));
 				msg.setSubject(subject.toString());
 				msg.setText(body.toString());
 				Transport.send(msg);
@@ -1356,176 +1341,15 @@ public class VirtualServerResource {
 
 }
 	
-//	private boolean makeSecurityGroup(String groupName, String id, String secret, URI location, String to, String firstName, String lastName) {
-//		AmazonEC2Client client = null;
-//		client = getEC2Client(id, secret, location);
-//		boolean found = true;
-//		try {
-//		client.createSecurityGroup(new CreateSecurityGroupRequest()
-//		.withGroupName("n3phele-"+groupName)
-//		.withDescription("n3phele "+groupName+" security group"));
-//		
-//		String ownerId = null;
-//		DescribeSecurityGroupsResult newGroupResult = client.describeSecurityGroups();
-//		for(SecurityGroup g : newGroupResult.getSecurityGroups()) {
-//			if(g.getGroupName().equals("n3phele-"+groupName)) {
-//				ownerId = g.getOwnerId();
-//			}
-//		}
-//		if(ownerId == null) return false;
-//		log.info("found ownerId of "+ownerId);
-//
-//		List<IpPermission> permissions = new ArrayList<IpPermission>();
-//
-//		
-//		UserIdGroupPair userIdGroupPairs = new UserIdGroupPair()
-//		.withUserId(ownerId)
-//		.withGroupName("n3phele-"+groupName);
-//		
-//		permissions.add(new IpPermission()
-//		.withIpProtocol("icmp")
-//		.withFromPort(-1)
-//		.withToPort(-1)
-//		.withUserIdGroupPairs(userIdGroupPairs));
-//		
-//		permissions.add(new IpPermission()
-//		.withIpProtocol("tcp")
-//		.withFromPort(1)
-//		.withToPort(65535)
-//		.withUserIdGroupPairs(userIdGroupPairs));
-//		
-//		permissions.add(new IpPermission()
-//		.withIpProtocol("udp")
-//		.withFromPort(1)
-//		.withToPort(65535)
-//		.withUserIdGroupPairs(userIdGroupPairs));
-//		
-//		permissions.add(new IpPermission()
-//		.withIpProtocol("tcp")
-//		.withFromPort(22)
-//		.withToPort(22)
-//		.withIpRanges("0.0.0.0/0"));
-//		
-//		permissions.add(new IpPermission()
-//		.withIpProtocol("tcp")
-//		.withFromPort(8887)
-//		.withToPort(8887)
-//		.withIpRanges("0.0.0.0/0"));
-//		
-//		
-//		client.authorizeSecurityGroupIngress(new AuthorizeSecurityGroupIngressRequest(
-//				"n3phele-"+groupName,
-//				permissions));
-//		sendSecurityGroupNotificationEmail("n3phele-"+groupName, to, firstName, lastName, location);
-//		} catch (Exception e) {
-//			log.log(Level.SEVERE, "Create security group "+groupName, e);
-//			found = false;
-//		}
-//		
-//		
-//		return found;
-//	}
-	private boolean makeSecurityGroup(String groupName, String id, String secret, URI location, String to, String firstName, String lastName) {
-		//TODO implement this using jcloud
-		/*AmazonEC2Client client = null;
-		client = getEC2Client(id, secret, location);
-		boolean found = true;
-		boolean failed = false;
-		try {
-			client.createSecurityGroup(new CreateSecurityGroupRequest()
-			.withGroupName("n3phele-"+groupName)
-			.withDescription("n3phele "+groupName+" security group"));
-			
-			String ownerId = null;
-			DescribeSecurityGroupsResult newGroupResult = client.describeSecurityGroups();
-			for(SecurityGroup g : newGroupResult.getSecurityGroups()) {
-				if(g.getGroupName().equals("n3phele-"+groupName)) {
-					ownerId = g.getOwnerId();
-				}
-			}
-			if(ownerId == null) return false;
-			log.info("found ownerId of "+ownerId);
-			
-			log.info("adding ssh ports");
-			try {
-			client.authorizeSecurityGroupIngress(new AuthorizeSecurityGroupIngressRequest()
-			.withGroupName("n3phele-"+groupName)
-			.withCidrIp("0.0.0.0/0")
-			.withIpProtocol("tcp")
-			.withFromPort(22)
-			.withToPort(22));
-			} catch (Exception e) {
-				log.log(Level.SEVERE, "Create security group "+groupName, e);
-				failed = true;
-			}
-			
-			log.info("adding agent ports");
-			try {
-			client.authorizeSecurityGroupIngress(new AuthorizeSecurityGroupIngressRequest()
-			.withGroupName("n3phele-"+groupName)
-			.withCidrIp("0.0.0.0/0")
-			.withIpProtocol("tcp")
-			.withFromPort(8887)
-			.withToPort(8887));
-			} catch (Exception e) {
-				log.log(Level.SEVERE, "Create security group "+groupName, e);
-				failed = true;
-			}
-	
-			if(!failed) {
-				log.info("adding self access");
-	
-				try {
-					List<IpPermission> permissions = new ArrayList<IpPermission>();
-
-					
-					UserIdGroupPair userIdGroupPairs = new UserIdGroupPair()
-					.withUserId(ownerId)
-					.withGroupName("n3phele-"+groupName);
-					
-					permissions.add(new IpPermission()
-					.withIpProtocol("icmp")
-					.withFromPort(-1)
-					.withToPort(-1)
-					.withUserIdGroupPairs(userIdGroupPairs));
-					
-					permissions.add(new IpPermission()
-					.withIpProtocol("tcp")
-					.withFromPort(1)
-					.withToPort(65535)
-					.withUserIdGroupPairs(userIdGroupPairs));
-					
-					permissions.add(new IpPermission()
-					.withIpProtocol("udp")
-					.withFromPort(1)
-					.withToPort(65535)
-					.withUserIdGroupPairs(userIdGroupPairs));
-					
-					log.info("adding icmp/tcp/udp");
-					
-					client.authorizeSecurityGroupIngress(new AuthorizeSecurityGroupIngressRequest(
-							"n3phele-"+groupName,
-							permissions));
-				} catch (Exception e) {
-					log.log(Level.WARNING, "Error adding self access to group "+groupName, e);
-				}
-			}
-
-			
-			if(failed) {
-				client.deleteSecurityGroup(new DeleteSecurityGroupRequest().withGroupName("n3phele-"+groupName));
-				found = false;
-			} else {
-				sendSecurityGroupNotificationEmail("n3phele-"+groupName, to, firstName, lastName, location);
-			}
-			
-		} catch (Exception e) {
-			log.log(Level.SEVERE, "Create security group "+groupName, e);
-			client.deleteSecurityGroup(new DeleteSecurityGroupRequest().withGroupName("n3phele-"+groupName));
-			found = false;
-		}
-		return found;*/
-		return false;
+	private boolean makeSecurityGroup(String groupName, String id, String secret, URI location, String to, String firstName, String lastName, String locationId)
+	{
+		HPCloudManager hpcManager = new HPCloudManager( new HPCloudCredentials(id, secret) );
+		
+		//FIXME: Find how to get zone
+		SecurityGroup sg = hpcManager.createSecurityGroup(groupName, locationId);
+		sendSecurityGroupNotificationEmail(sg.getName(), to, firstName, lastName, location);
+		
+		return true;
 	}
 
 	private static class VirtualServerManager extends AbstractManager<VirtualServer> {

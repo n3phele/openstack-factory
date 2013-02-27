@@ -243,7 +243,34 @@ public class HPCloudManager {
 
 		return (serversList.size() > 0) ? serversList : null;
 	}
+	
+	/**
+	 * Check is a security group exists
+	 */
+	public boolean checkSecurityGroup(String name, String zone)
+	{
+		SecurityGroup sg = null;
+		SecurityGroupApi sgApi = mNovaApi.getSecurityGroupExtensionForZone(zone).get();
+		String groupName;
+		
+		if( !name.startsWith("n3phele-") )
+			groupName = "n3phele-" + name;
+		else
+			groupName = name;
+		
+		sg = sgApi.get(groupName);
+		if(sg == null)
+			return false;
+		
+		return true;		
+	}
 
+	/**
+	 * Create a security group or return the existent one
+	 * @param name security group name
+	 * @param zone serverApi zone
+	 * @return
+	 */
 	public SecurityGroup createSecurityGroup(String name, String zone)
 	{
 		SecurityGroup sg = null;
