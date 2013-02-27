@@ -56,6 +56,7 @@ import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 
 import org.jclouds.openstack.v2_0.domain.Link.Relation;
+import org.jclouds.openstack.nova.v2_0.domain.KeyPair;
 import org.jclouds.openstack.nova.v2_0.domain.ServerCreated;
 import org.jclouds.openstack.v2_0.domain.Link;
 
@@ -761,8 +762,21 @@ public class VirtualServerResource {
 				HPCloudCredentials credentials = new HPCloudCredentials(item.getAccessKey(),item.getEncryptedKey());
 				HPCloudManager hpManager = new HPCloudManager(credentials);
 				
-				//FIXME: get zone from parameter
-				boolean result = hpManager.terminateNode("az-1.region-a.geo-1", item.getInstanceId());
+				String locationId = null;
+				ArrayList<NameValue> listParameters = item.getParameters();
+				for(NameValue p :listParameters){
+					if(p.getKey().equalsIgnoreCase("locationId")){
+						locationId = p.getValue();
+						break;
+					}
+				}
+				
+				if(locationId == null){					
+					log.log(Level.SEVERE, "locationId is null, cannot delete instance "+item.getInstanceId(), new IllegalArgumentException("locationId: null"));
+					throw new IllegalArgumentException("locationId: null");
+				}
+					
+				boolean result = hpManager.terminateNode(locationId, item.getInstanceId());
 				
 				if(result){
 					log.warning("Instance "+item.getInstanceId() + "deleted");
@@ -1204,20 +1218,27 @@ public class VirtualServerResource {
 	}*/
 
 	//TODO implement this using jcloud
-	/*private boolean createKey(String key, String id, String secret, URI location, String email, String firstName, String lastName) {
-		AmazonEC2Client client = null;
-		client = getEC2Client(id, secret, location);
-		boolean found = true;
+	private boolean createKey(String key, String id, String secret, URI location, String email, String firstName, String lastName, String locationId) {
+		HPCloudManager hpManager = new HPCloudManager(new HPCloudCredentials(id,secret));
+		KeyPair newKey = hpManager.createKeyPair(key, locationId);
+		
+		if(newKey != null){
+			log.warning("Got "+newKey.toString());
+			sendNotificationEmail(response.getKeyPair(), email, firstName, lastName, location);
+		}else{
+			
+		}
+		
 		try {
 			CreateKeyPairResult response = client.createKeyPair(new CreateKeyPairRequest().withKeyName("n3phele-"+key));
-			log.warning("Got "+response.getKeyPair().toString());
+			
 			sendNotificationEmail(response.getKeyPair(), email, firstName, lastName, location);
 		} catch (Exception e) {
 			log.severe("Create key pair exception "+e.getMessage());
 			found = false;
 		}
 		return found;
-	}*/
+	}
 
 	//TODO implement this using jcloud
 	/*public void sendNotificationEmail(KeyPair keyPair, String to, String firstName, String lastName, URI location) {
