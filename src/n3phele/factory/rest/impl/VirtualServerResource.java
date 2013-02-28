@@ -1218,40 +1218,31 @@ public class VirtualServerResource {
 		return found;
 	}*/
 
-	//TODO implement this using jcloud
 	private boolean createKey(String key, String id, String secret, URI location, String email, String firstName, String lastName, String locationId) {
+		
 		HPCloudManager hpManager = new HPCloudManager(new HPCloudCredentials(id,secret));
 		KeyPair newKey = hpManager.createKeyPair(key, locationId);
 		
 		if(newKey != null){
 			log.warning("Got "+newKey.toString());
-			sendNotificationEmail(response.getKeyPair(), email, firstName, lastName, location);
-		}else{
-			
+			sendNotificationEmail(newKey,email, firstName, lastName, location);
+			return true;
 		}
 		
-		try {
-			CreateKeyPairResult response = client.createKeyPair(new CreateKeyPairRequest().withKeyName("n3phele-"+key));
-			
-			sendNotificationEmail(response.getKeyPair(), email, firstName, lastName, location);
-		} catch (Exception e) {
-			log.severe("Create key pair exception "+e.getMessage());
-			found = false;
-		}
-		return found;
+		log.severe("Key pair couldn't be created");
+		return false;
 	}
 
-	//TODO implement this using jcloud
-	/*public void sendNotificationEmail(KeyPair keyPair, String to, String firstName, String lastName, URI location) {
+	public void sendNotificationEmail(KeyPair keyPair, String to, String firstName, String lastName, URI location) {
 			try {
 				StringBuilder subject = new StringBuilder();
 				StringBuilder body = new StringBuilder();
 					subject.append("Auto-generated keyPair \"");
-					subject.append(keyPair.getKeyName());
+					subject.append(keyPair.getName());
 					subject.append("\"");
 					body.append(firstName);
 					body.append(",\n\nA keypair named \"");
-					body.append(keyPair.getKeyName());
+					body.append(keyPair.getName());
 					body.append("\" has been generated for you. \n\n");
 					body.append("Please keep this information secure as it allows access to the virtual machines");
 					body.append(" run on your behalf by n3phele on the cloud at ");
@@ -1259,9 +1250,10 @@ public class VirtualServerResource {
 					body.append(". To access the machines using ssh copy all of the lines");
 					body.append(" including -----BEGIN RSA PRIVATE KEY----- and -----END RSA PRIVATE KEY-----");
 					body.append(" into a file named ");
-					body.append(keyPair.getKeyName());
+					body.append(keyPair.getName());
 					body.append(".pem\n\n");
-					body.append(keyPair.getKeyMaterial());
+					//TODO: check if private key is the same as key material
+					body.append(keyPair.getPrivateKey());
 					body.append("\n\nn3phele\n--\nhttps://n3phele.appspot.com\n\n");
 					
 					Properties props = new Properties();
@@ -1289,7 +1281,7 @@ public class VirtualServerResource {
 				log.log(Level.SEVERE,
 						"Email to " + to, e);
 			}
-	}*/
+	}
 
 	private boolean checkSecurityGroup(String groupName, String id, String secret, URI location, String locationId)
 	{
