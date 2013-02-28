@@ -51,14 +51,15 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 
 import org.jclouds.openstack.v2_0.domain.Link.Relation;
 import org.jclouds.openstack.nova.v2_0.domain.KeyPair;
 import org.jclouds.openstack.nova.v2_0.domain.SecurityGroup;
+import org.jclouds.openstack.nova.v2_0.domain.Server;
 import org.jclouds.openstack.nova.v2_0.domain.ServerCreated;
+import org.jclouds.openstack.nova.v2_0.domain.Server.Status;
 import org.jclouds.openstack.v2_0.domain.Link;
 
 import n3phele.factory.hpcloud.HPCloudCreateServerRequest;
@@ -547,11 +548,11 @@ public class VirtualServerResource {
 					log.info("Server is spot instance");
 					result = false;
 				}
-				//TODO implement this using jcloud 
-				/*else if(!virtualServer.getStatus().equalsIgnoreCase(InstanceStateName.Running.toString())) {
+				else if( !virtualServer.getStatus().equalsIgnoreCase( Status.ACTIVE.toString() ) )
+				{
 					log.info("Server is "+virtualServer.getStatus());
 					result = false;
-				}*/
+				}
 			}
 		} else {
 			log.info("Null server or instanceId");
@@ -590,12 +591,9 @@ public class VirtualServerResource {
 	 * @param sequence notification sequence number
 	 */
 
-	private void updateVirtualServer(VirtualServer item, UUID reference, int sequence) throws IllegalArgumentException {
-		//TODO implement this using jcloud
-		/*AmazonEC2Client client = null;
-		client = getEC2Client(item.getAccessKey(), item.getEncryptedKey(),
-				item.getLocation());*/
-		
+	private void updateVirtualServer(VirtualServer item, UUID reference, int sequence) throws IllegalArgumentException
+	{
+		HPCloudManager hpcManager = new HPCloudManager( new HPCloudCredentials(item.getAccessKey(), item.getEncryptedKey()) );
 		String instanceId = item.getInstanceId();
 		boolean madeIntoZombie = item.isZombie();
 		
@@ -608,75 +606,87 @@ public class VirtualServerResource {
 				return;
 			}
 		}
-			/*
-		} else if (instanceId != null && instanceId.length() > 0) {
-			DescribeInstancesResult update = client
-					.describeInstances(new DescribeInstancesRequest()
-							.withInstanceIds(item.getInstanceId()));
-			if (update.getReservations() != null
-					&& update.getReservations().size() > 0) {
-				Instance ec2Instance = update.getReservations().get(0)
-						.getInstances().get(0);
-				String newStatus = ec2Instance.getState().getName();
-
-				if (!item.getStatus().equalsIgnoreCase(
-						InstanceStateName.Running.toString())
-						&& InstanceStateName.Running.toString()
-								.equalsIgnoreCase(newStatus)) {
-					item.setOutputParameters(Extractor.extract(ec2Instance));
-					try {
-						client.createTags(new CreateTagsRequest()
-								.withResources(ec2Instance.getInstanceId())
-								.withTags(new Tag("Name", item.getName()),
-										new Tag("n3phele-factory", Resource.get("factoryName", "ec2Factory")),
-										new Tag("n3phele-uri", item.getUri().toString())));
-					} catch (Exception ex) {
-						log.log(Level.WARNING, "Cant set tag for "
-								+ ec2Instance.getInstanceId()
-								+ " associated with " + item.getName(), ex);
-					}
+		else if( instanceId != null && instanceId.length() > 0 )
+		{
+			ArrayList<NameValue> listParameters = item.getParameters();
+			String locationId = null;
+			
+			for(NameValue p : listParameters)
+			{
+				if(p.getKey().equalsIgnoreCase("locationId"))
+				{
+					locationId = p.getValue();
+					break;
 				}
-
-				if (updateStatus(item, newStatus, reference, sequence))
+			}
+			
+			Server s = hpcManager.getServerById(locationId, item.getInstanceId());
+			if(s != null)
+			{
+				Status currentStatus = s.getStatus();
+				
+				/**
+				 * If the statuses are different, and the current cloud status is ACTIVE (Running), we should update.
+				 */
+				if( !item.getStatus().equalsIgnoreCase( currentStatus.toString() ) && currentStatus.compareTo( Status.ACTIVE ) == 0 )
+				{
+					Map<String, String> tags = new HashMap<String, String>();
+					tags.put("Name", item.getName());
+					tags.put("n3phele-factory", Resource.get("factoryName", "openstack-factory"));
+					tags.put("n3phele-uri", item.getUri().toString());
+					
+					hpcManager.putServerTags(item.getInstanceId(), locationId, tags);
+				}
+				
+				if (updateStatus(item, currentStatus.toString(), reference, sequence))
 					update(item);
-				if (item.getStatus().equals("terminated")) {
-					log.warning("Instance " + ec2Instance.getInstanceId()	+ " terminated .. purging");
+				
+				if(item.getStatus().equals("terminated"))
+				{
+					log.warning("Instance " + item.getInstanceId()	+ " terminated .. purging");
 					delete(item);
 					return;
 				}
-			} else {
-				log.warning("Instance " + item.getInstanceId()+ " not found, assumed terminated .. purging");
-				updateStatus(item, InstanceStateName.Terminated.toString(), reference, sequence);
+			}
+			else
+			{
+				log.warning("Instance " + item.getInstanceId()	+ " not found, assumed terminated .. purging");
 				delete(item);
 				return;
 			}
-		}*/
+		}
 	}
 	
-	private void refreshVirtualServer(VirtualServer item) {
+	private void refreshVirtualServer(VirtualServer item)
+	{
 		if(item == null)
 			return;
-		//TODO implement this using jcloud
-		/*AmazonEC2Client client = getEC2Client(item.getAccessKey(), item.getEncryptedKey(),
-					item.getLocation());
-		String instanceId = item.getInstanceId();
-		if (instanceId != null && instanceId.length() > 0) {
-			DescribeInstancesResult update = client
-					.describeInstances(new DescribeInstancesRequest()
-							.withInstanceIds(item.getInstanceId()));
-			if (update.getReservations() != null
-					&& update.getReservations().size() > 0) {
-				Instance ec2Instance = update.getReservations().get(0)
-						.getInstances().get(0);
-				String newStatus = ec2Instance.getState().getName();
-				item.setStatus(newStatus);
-
-			} else {
-				log.warning("Instance " + item.getInstanceId()
-						+ " not found, assumed terminated .. ");
-				item.setStatus(InstanceStateName.Terminated.toString());
+		
+		HPCloudManager hpcManager = new HPCloudManager( new HPCloudCredentials(item.getAccessKey(), item.getEncryptedKey()) );
+		
+		ArrayList<NameValue> listParameters = item.getParameters();
+		String locationId = null;
+		
+		for(NameValue p : listParameters)
+		{
+			if(p.getKey().equalsIgnoreCase("locationId"))
+			{
+				locationId = p.getValue();
+				break;
 			}
-		}*/
+		}
+		
+		Server s = hpcManager.getServerById(locationId, item.getInstanceId());
+		if(s != null)
+		{
+			Status currentStatus = s.getStatus();
+			item.setStatus(currentStatus.toString());
+		}
+		else
+		{
+			log.warning("Instance " + item.getInstanceId()	+ " not found, assumed terminated ..");
+			item.setStatus(Status.DELETED.toString());
+		}
 	}
 	
 	/** Check if a zombie has expired and clean up if it has

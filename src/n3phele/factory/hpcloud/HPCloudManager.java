@@ -7,6 +7,7 @@ import static org.jclouds.compute.config.ComputeServiceProperties.TIMEOUT_SCRIPT
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -348,5 +349,15 @@ public class HPCloudManager {
 		}
 
 		return kp;
+	}
+
+	public void putServerTags(String instanceId, String locationId, Map<String, String> tags)
+	{
+		/**
+		 * Get server async api
+		 */
+		ServerApi serverApi = mNovaApi.getServerApiForZone(locationId);
+		
+		serverApi.updateMetadata(instanceId, tags);
 	}
 }
