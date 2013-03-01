@@ -1,5 +1,7 @@
 /**
  * @author Nigel Cook
+ * @author Alexandre Leites
+ * @author Cristina Scheibler
  *
  * (C) Copyright 2010-2012. Nigel Cook. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
@@ -319,28 +321,27 @@ public class VirtualServerResource {
 		List<ServerCreated> resultList = hpcManager.createServerRequest(hpcRequest);
 		List<URI> uriList = new ArrayList<URI>(resultList.size());
 		ArrayList<String> siblings = new ArrayList<String>(resultList.size());
-
+		ArrayList<VirtualServer> vsList = new ArrayList<VirtualServer>(resultList.size());
+		
 		Date epoch = new Date();
-		for (ServerCreated srv : resultList)
-		{
-			Set<Link> links = srv.getLinks();
-			for (Link link : links)
-			{
-				if (link.getRelation() == Relation.SELF)
-				{
-					uriList.add(link.getHref());
-					siblings.add(link.getHref().toString());
-					break;
-				}
-			}
-		}
-
 		for (ServerCreated srv : resultList)
 		{
 			VirtualServer item = new VirtualServer(srv.getName(), r.description, r.location, r.parameters, r.notification, r.accessKey, r.encryptedSecret, r.owner, r.idempotencyKey);
 			item.setCreated(epoch);
-			item.setSiblings(siblings);
 			add(item);
+			vsList.add(item);
+		}
+		
+		for(VirtualServer s : vsList)
+		{
+			uriList.add(s.getUri());
+			siblings.add(s.getUri().toString());
+		}
+		
+		for(VirtualServer s : vsList)
+		{
+			s.setSiblings(siblings);
+			update(s);
 		}
 
 		return Response.created(uriList.get(0)).entity(new HPCloudCreateServerResponse(uriList)).build();

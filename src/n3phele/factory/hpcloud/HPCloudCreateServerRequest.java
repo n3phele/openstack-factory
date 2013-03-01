@@ -1,3 +1,6 @@
+/**
+ * @author Alexandre Leites
+ */
 package n3phele.factory.hpcloud;
 
 import javax.xml.bind.annotation.XmlRootElement;
