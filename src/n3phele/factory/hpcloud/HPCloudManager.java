@@ -316,6 +316,26 @@ public class HPCloudManager {
 
 		return sg;
 	}
+	
+	public boolean checkKeyPair(String name, String zone)
+	{
+		KeyPairApi kpApi = mNovaApi.getKeyPairExtensionForZone(zone).get();
+		String kpName;
+		
+		if( !name.startsWith("n3phele-") )
+			kpName = "n3phele-" + name;
+		else
+			kpName = name;
+		
+		FluentIterable<? extends KeyPair> kpList = kpApi.list();
+		for (KeyPair kp : kpList)
+		{
+			if(kp.getName().equals(kpName))
+				return true;
+		}
+		
+		return false;
+	}
 
 	/**
 	 * Create a KeyPair with desired name

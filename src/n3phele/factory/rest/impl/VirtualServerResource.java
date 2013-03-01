@@ -135,36 +135,33 @@ public class VirtualServerResource {
 	@Produces("application/json")
 	@RolesAllowed("authenticated")
 	@Path("virtualServer/accountTest")
-	public String accountTest(
-			@DefaultValue("false") @FormParam("fix") Boolean fix,
-			@FormParam("id") String id,
-			@FormParam("secret") String secret,
-			@FormParam("key") String key,
-			@FormParam("location") URI location,
-			@FormParam("locationId") String locationId,
-			@FormParam("email") String email,
-			@FormParam("firstName") String firstName,
-			@FormParam("lastName") String lastName,
-			@FormParam("securityGroup") String securityGroup) {
+	public String accountTest(@DefaultValue("false") @FormParam("fix") Boolean fix, @FormParam("id") String id, @FormParam("secret") String secret, @FormParam("key") String key, @FormParam("location") URI location, @FormParam("locationId") String locationId, @FormParam("email") String email, @FormParam("firstName") String firstName, @FormParam("lastName") String lastName, @FormParam("securityGroup") String securityGroup)
+	{
 
-		//TODO implement this using jcloud
+		// TODO implement this using jcloud
 		log.info("accountTest with fix " + fix);
-		if(fix && (email == null || email.trim().length() == 0) || (firstName == null || firstName.trim().length()== 0)	|| (lastName == null || lastName.trim().length() == 0))
+		if (fix && (email == null || email.trim().length() == 0)
+				|| (firstName == null || firstName.trim().length() == 0)
+				|| (lastName == null || lastName.trim().length() == 0))
 			throw new IllegalArgumentException("email details must be supplied with option to fix");
-		/*boolean resultKey = checkKey(key, id, secret, location);
-		if(!resultKey && fix) {
-			resultKey = createKey(key, id, secret, location, email, firstName, lastName);
-		}*/
+		boolean resultKey = checkKey(key, id, secret, location, locationId);
+		if (!resultKey && fix)
+		{
+			resultKey = createKey(key, id, secret, location, email, firstName, lastName, locationId);
+		}
 		boolean result = checkSecurityGroup(securityGroup, id, secret, location, locationId);
-		if(!result && fix) {
+		if (!result && fix)
+		{
 			result = makeSecurityGroup(securityGroup, id, secret, location, email, firstName, lastName, locationId);
 		}
-		
+
 		String reply = "";
-		/*if(!resultKey) 
-			reply = "KeyPair "+key+" does not exist"+(fix?" and could not be created.\n":"\n");*/
-		if(!result) 
-			reply = "Security group "+securityGroup+" does not exist"+(fix?" and could not be created.\n":"\n");
+		if (!resultKey)
+			reply = "KeyPair " + key + " does not exist"
+					+ (fix ? " and could not be created.\n" : "\n");
+		if (!result)
+			reply = "Security group " + securityGroup + " does not exist"
+					+ (fix ? " and could not be created.\n" : "\n");
 		return reply;
 	}
 
@@ -180,13 +177,12 @@ public class VirtualServerResource {
 	@Produces("application/json")
 	@RolesAllowed("authenticated")
 	@Path("virtualServer")
-	public Collection<BaseEntity> list(
-			@DefaultValue("false") @QueryParam("summary") Boolean summary) {
+	public Collection<BaseEntity> list(@DefaultValue("false") @QueryParam("summary") Boolean summary)
+	{
 
 		log.info("get entered with summary " + summary);
 
-		Collection<BaseEntity> result = getCollection()
-				.collection(summary);
+		Collection<BaseEntity> result = getCollection().collection(summary);
 		return result;
 	}
 	
@@ -197,7 +193,8 @@ public class VirtualServerResource {
 	@Produces("application/json")
 	@RolesAllowed("authenticated")
 	@Path("virtualServer/inputParameters")
-	public TypedParameter[] inputParameterList() {
+	public TypedParameter[] inputParameterList()
+	{
 
 		return inputParameters;
 	}
@@ -209,7 +206,8 @@ public class VirtualServerResource {
 	@Produces("application/json")
 	@RolesAllowed("authenticated")
 	@Path("virtualServer/outputParameters")
-	public TypedParameter[] outputParameterList() {
+	public TypedParameter[] outputParameterList()
+	{
 
 		return outputParameters;
 	}
@@ -233,95 +231,102 @@ public class VirtualServerResource {
 		int minCount = 1;
 		int maxCount = 1;
 		HPCloudCreateServerRequest hpcRequest = new HPCloudCreateServerRequest();
-		HPCloudManager hpcManager = new HPCloudManager( new HPCloudCredentials(r.accessKey, r.encryptedSecret) );
-		
-		//TODO: Fix 'zombie' and 'debug' implementation
-		if( "zombie".equalsIgnoreCase(r.name) || "debug".equalsIgnoreCase(r.name) )
+		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(r.accessKey, r.encryptedSecret));
+
+		// TODO: Fix 'zombie' and 'debug' implementation
+		if ("zombie".equalsIgnoreCase(r.name)
+				|| "debug".equalsIgnoreCase(r.name))
 		{
 			r.name = r.name.toUpperCase();
 		}
-		
-		if( !r.name.startsWith("n3phele-") )
+
+		if (!r.name.startsWith("n3phele-"))
 		{
 			r.name = "n3phele-" + r.name;
 		}
-		
-		for(NameValue p : r.parameters)
+
+		for (NameValue p : r.parameters)
 		{
-			if(p.getKey().equalsIgnoreCase("minCount"))
+			if (p.getKey().equalsIgnoreCase("minCount"))
 			{
 				String value = p.getValue();
-				try {
+				try
+				{
 					minCount = Integer.valueOf(value);
-					if(minCount <= 0) minCount = 1;
-				} catch (Exception e) {
-					
+					if (minCount <= 0)
+						minCount = 1;
+				} catch (Exception e)
+				{
+
 				}
 			}
-			
-			if(p.getKey().equalsIgnoreCase("maxCount"))
+
+			if (p.getKey().equalsIgnoreCase("maxCount"))
 			{
 				String value = p.getValue();
-				try {
+				try
+				{
 					maxCount = Integer.valueOf(value);
-					if(maxCount <=0) maxCount = 1;
-				} catch (Exception e) {
-					
+					if (maxCount <= 0)
+						maxCount = 1;
+				} catch (Exception e)
+				{
+
 				}
 			}
-			
-			if(p.getKey().equalsIgnoreCase("imageId"))
+
+			if (p.getKey().equalsIgnoreCase("imageId"))
 			{
 				hpcRequest.imageId = p.getValue();
 			}
-			
-			if(p.getKey().equalsIgnoreCase("instanceType"))
+
+			if (p.getKey().equalsIgnoreCase("instanceType"))
 			{
 				hpcRequest.hardwareId = p.getValue();
 			}
-			
-			if(p.getKey().equalsIgnoreCase("securityGroups"))
+
+			if (p.getKey().equalsIgnoreCase("securityGroups"))
 			{
 				hpcRequest.securityGroup = p.getValue();
 			}
-			
-			if(p.getKey().equalsIgnoreCase("userData"))
+
+			if (p.getKey().equalsIgnoreCase("userData"))
 			{
 				hpcRequest.userData = p.getValue();
 			}
-			
-			if(p.getKey().equalsIgnoreCase("locationId"))
+
+			if (p.getKey().equalsIgnoreCase("locationId"))
 			{
 				hpcRequest.locationId = p.getValue();
 			}
 		}
-		
-		if(minCount > maxCount)
+
+		if (minCount > maxCount)
 		{
 			maxCount = minCount;
 		}
-		
-		hpcRequest.nodeCount  = maxCount;
-		hpcRequest.keyPair    = r.name;
+
+		hpcRequest.nodeCount = maxCount;
+		hpcRequest.keyPair = r.name;
 		hpcRequest.serverName = r.name;
-		
-		//FIXME: Server names must be unique, maybe set this as a metadata?
-		/*if("zombie".equalsIgnoreCase(r.name) || "debug".equalsIgnoreCase(r.name))
-		{
-			r.name = r.name.toUpperCase();
-		}*/
-		
+
+		// FIXME: Server names must be unique, maybe set this as a metadata?
+		/*
+		 * if("zombie".equalsIgnoreCase(r.name) ||
+		 * "debug".equalsIgnoreCase(r.name)) { r.name = r.name.toUpperCase(); }
+		 */
+
 		List<ServerCreated> resultList = hpcManager.createServerRequest(hpcRequest);
 		List<URI> uriList = new ArrayList<URI>(resultList.size());
 		ArrayList<String> siblings = new ArrayList<String>(resultList.size());
-		
+
 		Date epoch = new Date();
-		for(ServerCreated srv : resultList)
+		for (ServerCreated srv : resultList)
 		{
 			Set<Link> links = srv.getLinks();
-			for(Link link : links)
+			for (Link link : links)
 			{
-				if( link.getRelation() == Relation.SELF )
+				if (link.getRelation() == Relation.SELF)
 				{
 					uriList.add(link.getHref());
 					siblings.add(link.getHref().toString());
@@ -329,15 +334,15 @@ public class VirtualServerResource {
 				}
 			}
 		}
-		
-		for(ServerCreated srv : resultList)
-		{	
-			VirtualServer item = new VirtualServer( srv.getName(), r.description, r.location, r.parameters, r.notification, r.accessKey, r.encryptedSecret, r.owner, r.idempotencyKey );
+
+		for (ServerCreated srv : resultList)
+		{
+			VirtualServer item = new VirtualServer(srv.getName(), r.description, r.location, r.parameters, r.notification, r.accessKey, r.encryptedSecret, r.owner, r.idempotencyKey);
 			item.setCreated(epoch);
 			item.setSiblings(siblings);
 			add(item);
 		}
-		
+
 		return Response.created(uriList.get(0)).entity(new HPCloudCreateServerResponse(uriList)).build();
 	}
 
@@ -352,8 +357,8 @@ public class VirtualServerResource {
 			"application/vnd.com.n3phele.VirtualServer+json" })
 	@Path("virtualServer/{id}")
 	@RolesAllowed("authenticated")
-	public VirtualServer get(@PathParam("id") Long id)
-			throws NotFoundException {
+	public VirtualServer get(@PathParam("id") Long id) throws NotFoundException
+	{
 
 		VirtualServer item = deepGet(id);
 
@@ -367,37 +372,42 @@ public class VirtualServerResource {
 	@DELETE
 	@Path("virtualServer/{id}")
 	@RolesAllowed("authenticated")
-	public void kill(@PathParam("id") Long id,
-			@DefaultValue("false") @QueryParam("debug") boolean debug,
-			@DefaultValue("false") @QueryParam("error") boolean error) throws NotFoundException {
+	public void kill(@PathParam("id") Long id, @DefaultValue("false") @QueryParam("debug") boolean debug, @DefaultValue("false") @QueryParam("error") boolean error) throws NotFoundException
+	{
 		VirtualServer virtualServer = null;
-		try {
+		try
+		{
 			virtualServer = deepGet(id);
-			if(error && !debug) {
+			if (error && !debug)
+			{
 				terminate(virtualServer);
 			} else
 				softKill(virtualServer, error);
-		} catch (Exception e) {
-			try {
+		} catch (Exception e)
+		{
+			try
+			{
 				virtualServer = get(id);
 				terminate(virtualServer);
-			} catch (Exception ee) {
-				if(virtualServer != null)
+			} catch (Exception ee)
+			{
+				if (virtualServer != null)
 					delete(virtualServer);
 			}
 		}
-		
+
 	}
 	
 	
 	@GET
 	@Produces("text/plain")
 	@Path("total")
-	public String total() {
+	public String total()
+	{
 		String result;
 		Collection<VirtualServer> servers = getCollection();
-		result=Long.toString(servers.getTotal())+"\n";
-		result += Calendar.getInstance().getTime().toString()+"\n";
+		result = Long.toString(servers.getTotal()) + "\n";
+		result += Calendar.getInstance().getTime().toString() + "\n";
 		return result;
 	}
 	
@@ -405,12 +415,15 @@ public class VirtualServerResource {
 	 * @param virtualServer virtual server to be terminated
 	 * @param error true that the server needs to be terminated, false it is a candidate for reuse
 	 */
-	protected void terminate(VirtualServer virtualServer) {;
-		
-		try {
+	protected void terminate(VirtualServer virtualServer)
+	{
+		;
+		try
+		{
 			deleteInstance(virtualServer, UUID.randomUUID(), 0);
-		} catch (Exception e) {
-			manager.delete(virtualServer); 
+		} catch (Exception e)
+		{
+			manager.delete(virtualServer);
 		}
 	}
 	
@@ -418,19 +431,23 @@ public class VirtualServerResource {
 	 * @param virtualServer virtual server to be terminated
 	 * @param stop true only stop the server, false terminate the server
 	 */
-	protected void softKill(VirtualServer virtualServer, boolean error) {;
-
-		try {
-			if(!isZombieCandidate(virtualServer))
+	protected void softKill(VirtualServer virtualServer, boolean error)
+	{
+		;
+		try
+		{
+			if (!isZombieCandidate(virtualServer))
 				deleteInstance(virtualServer, UUID.randomUUID(), 0);
-			else {
-				if(error)
+			else
+			{
+				if (error)
 					makeDebug(virtualServer, UUID.randomUUID(), 0);
 				else
 					makeZombie(virtualServer, UUID.randomUUID(), 0);
 			}
-		} catch (Exception e) {
-			manager.delete(virtualServer); 
+		} catch (Exception e)
+		{
+			manager.delete(virtualServer);
 		}
 	}
 	
@@ -535,26 +552,35 @@ public class VirtualServerResource {
 		}
 	}
 	
-	private boolean isZombieCandidate(VirtualServer virtualServer) {
-		boolean result = virtualServer != null 
-				&& virtualServer.getInstanceId() != null && virtualServer.getInstanceId().length() > 0;
+	private boolean isZombieCandidate(VirtualServer virtualServer)
+	{
+		boolean result = virtualServer != null
+				&& virtualServer.getInstanceId() != null
+				&& virtualServer.getInstanceId().length() > 0;
 
-		if(result) {
-			if(virtualServer.getSiblings() != null && virtualServer.getSiblings().size() > 1) {
-				log.info("Server has "+virtualServer.getSiblings().size()+" siblings");
+		if (result)
+		{
+			if (virtualServer.getSiblings() != null
+					&& virtualServer.getSiblings().size() > 1)
+			{
+				log.info("Server has " + virtualServer.getSiblings().size()
+						+ " siblings");
 				result = false;
-			} else {
-				if(virtualServer.getSpotId() != null && virtualServer.getSpotId().length() != 0) {
+			} else
+			{
+				if (virtualServer.getSpotId() != null
+						&& virtualServer.getSpotId().length() != 0)
+				{
 					log.info("Server is spot instance");
 					result = false;
-				}
-				else if( !virtualServer.getStatus().equalsIgnoreCase( Status.ACTIVE.toString() ) )
+				} else if (!virtualServer.getStatus().equalsIgnoreCase(Status.ACTIVE.toString()))
 				{
-					log.info("Server is "+virtualServer.getStatus());
+					log.info("Server is " + virtualServer.getStatus());
 					result = false;
 				}
 			}
-		} else {
+		} else
+		{
 			log.info("Null server or instanceId");
 		}
 		return result;
@@ -568,21 +594,21 @@ public class VirtualServerResource {
 	@Path("admin/refresh")
 	@Produces("application/json")
 	@RolesAllowed("admin")
-	public Collection<BaseEntity> refresh() {
-		
+	public Collection<BaseEntity> refresh()
+	{
 		long start = Calendar.getInstance().getTimeInMillis();
 
 		Collection<BaseEntity> result = refreshCollection();
-		
-		log.info(String.format("-----refresh-- %d ms processing %d items", (Calendar.getInstance().getTimeInMillis()-start), result.getTotal()));
+
+		log.info(String.format("-----refresh-- %d ms processing %d items", (Calendar.getInstance().getTimeInMillis() - start), result.getTotal()));
 		return result;
 	}
 
-	protected VirtualServer deepGet(Long id) throws NotFoundException {
+	protected VirtualServer deepGet(Long id) throws NotFoundException
+	{
 		VirtualServer s = load(id);
 		updateVirtualServer(s, UUID.randomUUID(), 0);
 		return s;
-
 	}
 	
 	/** Updates virtual server object and data store state
@@ -593,64 +619,69 @@ public class VirtualServerResource {
 
 	private void updateVirtualServer(VirtualServer item, UUID reference, int sequence) throws IllegalArgumentException
 	{
-		HPCloudManager hpcManager = new HPCloudManager( new HPCloudCredentials(item.getAccessKey(), item.getEncryptedKey()) );
+		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(item.getAccessKey(), item.getEncryptedKey()));
 		String instanceId = item.getInstanceId();
 		boolean madeIntoZombie = item.isZombie();
-		
-		if (madeIntoZombie) {
+
+		if (madeIntoZombie)
+		{
 			if (updateStatus(item, "terminated", reference, sequence))
 				update(item);
-			if (item.getStatus().equals("terminated")) {
-				log.warning("Instance " + item.getName() + " terminated .. purging");
+			if (item.getStatus().equals("terminated"))
+			{
+				log.warning("Instance " + item.getName()
+						+ " terminated .. purging");
 				delete(item);
 				return;
 			}
-		}
-		else if( instanceId != null && instanceId.length() > 0 )
+		} else if (instanceId != null && instanceId.length() > 0)
 		{
 			ArrayList<NameValue> listParameters = item.getParameters();
 			String locationId = null;
-			
-			for(NameValue p : listParameters)
+
+			for (NameValue p : listParameters)
 			{
-				if(p.getKey().equalsIgnoreCase("locationId"))
+				if (p.getKey().equalsIgnoreCase("locationId"))
 				{
 					locationId = p.getValue();
 					break;
 				}
 			}
-			
+
 			Server s = hpcManager.getServerById(locationId, item.getInstanceId());
-			if(s != null)
+			if (s != null)
 			{
 				Status currentStatus = s.getStatus();
-				
+
 				/**
-				 * If the statuses are different, and the current cloud status is ACTIVE (Running), we should update.
+				 * If the statuses are different, and the current cloud status
+				 * is ACTIVE (Running), we should update.
 				 */
-				if( !item.getStatus().equalsIgnoreCase( currentStatus.toString() ) && currentStatus.compareTo( Status.ACTIVE ) == 0 )
+				if (!item.getStatus().equalsIgnoreCase(currentStatus.toString())
+						&& currentStatus.compareTo(Status.ACTIVE) == 0)
 				{
 					Map<String, String> tags = new HashMap<String, String>();
 					tags.put("Name", item.getName());
 					tags.put("n3phele-factory", Resource.get("factoryName", "openstack-factory"));
 					tags.put("n3phele-uri", item.getUri().toString());
-					
+
 					hpcManager.putServerTags(item.getInstanceId(), locationId, tags);
 				}
-				
+
 				if (updateStatus(item, currentStatus.toString(), reference, sequence))
 					update(item);
-				
-				if(item.getStatus().equals("terminated"))
+
+				if (item.getStatus().equals("terminated"))
 				{
-					log.warning("Instance " + item.getInstanceId()	+ " terminated .. purging");
+					log.warning("Instance " + item.getInstanceId()
+							+ " terminated .. purging");
 					delete(item);
 					return;
 				}
-			}
-			else
+			} else
 			{
-				log.warning("Instance " + item.getInstanceId()	+ " not found, assumed terminated .. purging");
+				log.warning("Instance " + item.getInstanceId()
+						+ " not found, assumed terminated .. purging");
 				delete(item);
 				return;
 			}
@@ -659,32 +690,32 @@ public class VirtualServerResource {
 	
 	private void refreshVirtualServer(VirtualServer item)
 	{
-		if(item == null)
+		if (item == null)
 			return;
-		
-		HPCloudManager hpcManager = new HPCloudManager( new HPCloudCredentials(item.getAccessKey(), item.getEncryptedKey()) );
-		
+
+		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(item.getAccessKey(), item.getEncryptedKey()));
+
 		ArrayList<NameValue> listParameters = item.getParameters();
 		String locationId = null;
-		
-		for(NameValue p : listParameters)
+
+		for (NameValue p : listParameters)
 		{
-			if(p.getKey().equalsIgnoreCase("locationId"))
+			if (p.getKey().equalsIgnoreCase("locationId"))
 			{
 				locationId = p.getValue();
 				break;
 			}
 		}
-		
+
 		Server s = hpcManager.getServerById(locationId, item.getInstanceId());
-		if(s != null)
+		if (s != null)
 		{
 			Status currentStatus = s.getStatus();
 			item.setStatus(currentStatus.toString());
-		}
-		else
+		} else
 		{
-			log.warning("Instance " + item.getInstanceId()	+ " not found, assumed terminated ..");
+			log.warning("Instance " + item.getInstanceId()
+					+ " not found, assumed terminated ..");
 			item.setStatus(Status.DELETED.toString());
 		}
 	}
@@ -762,95 +793,63 @@ public class VirtualServerResource {
 		return result;
 	}
 
-	private void deleteInstance(VirtualServer item, UUID reference, int sequence) throws Exception {
-
+	private void deleteInstance(VirtualServer item, UUID reference, int sequence) throws Exception
+	{
 		String instanceId = item.getInstanceId();
-		try {
-			
+		try
+		{
+
 			if (!item.getStatus().equalsIgnoreCase("Terminated")
-					&& instanceId != null && instanceId.length() > 0) {
-				
-				HPCloudCredentials credentials = new HPCloudCredentials(item.getAccessKey(),item.getEncryptedKey());
+					&& instanceId != null && instanceId.length() > 0)
+			{
+
+				HPCloudCredentials credentials = new HPCloudCredentials(item.getAccessKey(), item.getEncryptedKey());
 				HPCloudManager hpManager = new HPCloudManager(credentials);
-				
+
 				String locationId = null;
 				ArrayList<NameValue> listParameters = item.getParameters();
-				for(NameValue p :listParameters){
-					if(p.getKey().equalsIgnoreCase("locationId")){
+				for (NameValue p : listParameters)
+				{
+					if (p.getKey().equalsIgnoreCase("locationId"))
+					{
 						locationId = p.getValue();
 						break;
 					}
 				}
-				
-				if(locationId == null){					
-					log.log(Level.SEVERE, "locationId is null, cannot delete instance "+item.getInstanceId(), new IllegalArgumentException("locationId: null"));
+
+				if (locationId == null)
+				{
+					log.log(Level.SEVERE, "locationId is null, cannot delete instance "
+							+ item.getInstanceId(), new IllegalArgumentException("locationId: null"));
 					throw new IllegalArgumentException("locationId: null");
 				}
-					
+
 				boolean result = hpManager.terminateNode(locationId, item.getInstanceId());
-				
-				if(result){
-					log.warning("Instance "+item.getInstanceId() + "deleted");
-					if (updateStatus(item, "Terminated",  reference, sequence)) {
+
+				if (result)
+				{
+					log.warning("Instance " + item.getInstanceId() + "deleted");
+					if (updateStatus(item, "Terminated", reference, sequence))
+					{
 						update(item);
 					}
+				} else
+				{
+					log.warning("Instance " + item.getInstanceId()
+							+ "could not be deleted");
 				}
-				else{
-					log.warning("Instance "+item.getInstanceId() + "could not be deleted");
-				}
-				
-			} else {
-				if (updateStatus(item, "Terminated",  reference, sequence)) {
+
+			} else
+			{
+				if (updateStatus(item, "Terminated", reference, sequence))
+				{
 					update(item);
 				}
-			}	
-
-		} catch (Exception e) {
-			log.log(Level.SEVERE, "Cleanup delete of instanceId " + instanceId,
-					e);
-			throw e;
-		}
-
-	}
-
-	private void cancelSpotVMRequest(VirtualServer item) throws Exception {
-		String spotId = item.getSpotId();
-		try {
-			if (spotId != null && spotId.length() > 0) {
-				//TODO implement this using jcloud
-				/*AmazonEC2Client client = null;
-				client = getEC2Client(item.getAccessKey(),
-						item.getEncryptedKey(), item.getLocation());
-				try {
-					if (item.getInstanceId() == null
-							|| item.getInstanceId().length() == 0) {
-						
-						DescribeSpotInstanceRequestsResult update = client
-								.describeSpotInstanceRequests(new DescribeSpotInstanceRequestsRequest()
-										.withSpotInstanceRequestIds(spotId));
-						String instanceId = update.getSpotInstanceRequests()
-								.get(0).getInstanceId();
-						item.setInstanceId(instanceId);
-						update(item);
-					}
-				} catch (Exception e) {
-					log.log(Level.WARNING, "Spot request " + spotId
-							+ " update failed ", e);
-				}
-
-				CancelSpotInstanceRequestsRequest request = new CancelSpotInstanceRequestsRequest()
-						.withSpotInstanceRequestIds(spotId);
-				CancelSpotInstanceRequestsResult result = client
-						.cancelSpotInstanceRequests(request);
-				log.info("Cancel spot request "
-						+ spotId
-						+ " status "
-						+ result.getCancelledSpotInstanceRequests().get(0)
-								.getState().toString());*/
 			}
-		} catch (Exception e) {
-			log.log(Level.SEVERE, "Cleanup delete of spot instance " + spotId,
-					e);
+
+		} catch (Exception e)
+		{
+			log.log(Level.SEVERE, "Cleanup delete of instanceId " + instanceId, e);
 			throw e;
 		}
 
@@ -925,25 +924,37 @@ public class VirtualServerResource {
 	
 	}
 	
-	private boolean SafeEquals(String a, String b) {
-		if((a == null || a.length()==0) && (b==null || b.length()==0)) return true;
-		if(a == null || b == null) return false;
-		return(a.equals(b));
+	private boolean SafeEquals(String a, String b)
+	{
+		if ((a == null || a.length() == 0) && (b == null || b.length() == 0))
+			return true;
+		if (a == null || b == null)
+			return false;
+		return (a.equals(b));
 	}
 
-	protected boolean updateStatus(VirtualServer s, String newStatus, UUID reference, int sequence) {
+	protected boolean updateStatus(VirtualServer s, String newStatus, UUID reference, int sequence)
+	{
 		String oldStatus = s.getStatus();
 		newStatus = newStatus.toLowerCase();
 		if (oldStatus.equals(newStatus))
 			return false;
 		s.setStatus(newStatus);
-		try {
+		try
+		{
 			sendNotification(s, oldStatus.toLowerCase(), newStatus, reference.toString(), sequence);
-		} catch (Exception e) {
-			log.log(Level.INFO, "SendNotification exception to <"+s.getNotification()+"> from "+s.getUri()+" old: "+oldStatus+" new: "+s.getStatus(), e);
-			if(oldStatus.equals(newStatus.toUpperCase())) {
-				log.warning("Cancelling SendNotification to <"+s.getNotification()+"> from "+s.getUri()+" old: "+oldStatus+" new: "+s.getStatus());
-			} else {
+		} catch (Exception e)
+		{
+			log.log(Level.INFO, "SendNotification exception to <"
+					+ s.getNotification() + "> from " + s.getUri() + " old: "
+					+ oldStatus + " new: " + s.getStatus(), e);
+			if (oldStatus.equals(newStatus.toUpperCase()))
+			{
+				log.warning("Cancelling SendNotification to <"
+						+ s.getNotification() + "> from " + s.getUri()
+						+ " old: " + oldStatus + " new: " + s.getStatus());
+			} else
+			{
 				s.setStatus(newStatus.toUpperCase());
 			}
 		}
@@ -951,189 +962,179 @@ public class VirtualServerResource {
 	}
 
 
-	private void sendNotification(VirtualServer s, String oldStatus,
-			String newStatus, String reference, int sequence) throws Exception {
+	private void sendNotification(VirtualServer s, String oldStatus, String newStatus, String reference, int sequence) throws Exception
+	{
 		URI notification = s.getNotification();
-		log.info("SendNotification to <"+notification+"> from "+s.getUri()+" old: "+oldStatus+" new: "+s.getStatus());
+		log.info("SendNotification to <" + notification + "> from "
+				+ s.getUri() + " old: " + oldStatus + " new: " + s.getStatus());
 
-		if(notification == null)
+		if (notification == null)
 			return;
-		
-		if(client == null) { 
+
+		if (client == null)
+		{
 			client = Client.create();
 		}
 		WebResource resource = client.resource(s.getNotification());
 
-		ClientResponse response = resource.queryParam("source", s.getUri().toString())
-											.queryParam("oldStatus", oldStatus)
-											.queryParam("newStatus", newStatus)
-											.queryParam("reference", reference)
-											.queryParam("sequence", Integer.toString(sequence))
-											.type(MediaType.TEXT_PLAIN)
-											.get(ClientResponse.class);
-		log.info("Notificaion status "+response.getStatus());
-		if(response.getStatus() == 410) {
-			log.severe("VM GONE .. killing "+s.getUri()+" silencing reporting to "+s.getNotification());
+		ClientResponse response = resource.queryParam("source", s.getUri().toString()).queryParam("oldStatus", oldStatus).queryParam("newStatus", newStatus).queryParam("reference", reference).queryParam("sequence", Integer.toString(sequence)).type(MediaType.TEXT_PLAIN).get(ClientResponse.class);
+		log.info("Notificaion status " + response.getStatus());
+		if (response.getStatus() == 410)
+		{
+			log.severe("VM GONE .. killing " + s.getUri()
+					+ " silencing reporting to " + s.getNotification());
 			s.setNotification(null);
 			deleteInstance(s, UUID.randomUUID(), 0);
 		}
 	}
 
-	//TODO implement this using jcloud
-	/*private boolean checkKey(String key, String id, String secret, URI location) {
-		AmazonEC2Client client = null;
-		client = getEC2Client(id, secret, location);
-		boolean found = true;
-		try {
-			DescribeKeyPairsResult response = client.describeKeyPairs(new DescribeKeyPairsRequest().withKeyNames("n3phele-"+key));
-			if(response.getKeyPairs() == null || response.getKeyPairs().isEmpty()) {
-				log.warning("No key pairs found");
-				found = false;
-			} else {
-				log.warning("Found "+response.getKeyPairs().size()+" "+response.getKeyPairs().toString());
-			}
-		} catch (Exception e) {
-			log.severe("Check security group exception "+e.getMessage());
-			found = false;
-		}
-		return found;
-	}*/
+	private boolean checkKey(String key, String id, String secret, URI location, String locationId)
+	{
+		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(id, secret));
 
-	private boolean createKey(String key, String id, String secret, URI location, String email, String firstName, String lastName, String locationId) {
-		
-		HPCloudManager hpManager = new HPCloudManager(new HPCloudCredentials(id,secret));
-		KeyPair newKey = hpManager.createKeyPair(key, locationId);
-		
-		if(newKey != null){
-			log.warning("Got "+newKey.toString());
-			sendNotificationEmail(newKey,email, firstName, lastName, location);
+		return hpcManager.checkKeyPair(key, locationId);
+	}
+
+	private boolean createKey(String key, String id, String secret, URI location, String email, String firstName, String lastName, String locationId)
+	{
+		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(id, secret));
+		KeyPair newKey = hpcManager.createKeyPair(key, locationId);
+
+		if (newKey != null)
+		{
+			log.warning("Got " + newKey.toString());
+			sendNotificationEmail(newKey, email, firstName, lastName, location);
 			return true;
 		}
-		
+
 		log.severe("Key pair couldn't be created");
 		return false;
 	}
 
-	public void sendNotificationEmail(KeyPair keyPair, String to, String firstName, String lastName, URI location) {
-			try {
-				StringBuilder subject = new StringBuilder();
-				StringBuilder body = new StringBuilder();
-					subject.append("Auto-generated keyPair \"");
-					subject.append(keyPair.getName());
-					subject.append("\"");
-					body.append(firstName);
-					body.append(",\n\nA keypair named \"");
-					body.append(keyPair.getName());
-					body.append("\" has been generated for you. \n\n");
-					body.append("Please keep this information secure as it allows access to the virtual machines");
-					body.append(" run on your behalf by n3phele on the cloud at ");
-					body.append(location.toString());
-					body.append(". To access the machines using ssh copy all of the lines");
-					body.append(" including -----BEGIN RSA PRIVATE KEY----- and -----END RSA PRIVATE KEY-----");
-					body.append(" into a file named ");
-					body.append(keyPair.getName());
-					body.append(".pem\n\n");
-					//TODO: check if private key is the same as key material
-					body.append(keyPair.getPrivateKey());
-					body.append("\n\nn3phele\n--\nhttps://n3phele.appspot.com\n\n");
-					
-					Properties props = new Properties();
-					Session session = Session.getDefaultInstance(props, null);
+	public void sendNotificationEmail(KeyPair keyPair, String to, String firstName, String lastName, URI location)
+	{
+		try
+		{
+			StringBuilder subject = new StringBuilder();
+			StringBuilder body = new StringBuilder();
+			subject.append("Auto-generated keyPair \"");
+			subject.append(keyPair.getName());
+			subject.append("\"");
+			body.append(firstName);
+			body.append(",\n\nA keypair named \"");
+			body.append(keyPair.getName());
+			body.append("\" has been generated for you. \n\n");
+			body.append("Please keep this information secure as it allows access to the virtual machines");
+			body.append(" run on your behalf by n3phele on the cloud at ");
+			body.append(location.toString());
+			body.append(". To access the machines using ssh copy all of the lines");
+			body.append(" including -----BEGIN RSA PRIVATE KEY----- and -----END RSA PRIVATE KEY-----");
+			body.append(" into a file named ");
+			body.append(keyPair.getName());
+			body.append(".pem\n\n");
+			// TODO: check if private key is the same as key material
+			body.append(keyPair.getPrivateKey());
+			body.append("\n\nn3phele\n--\nhttps://n3phele.appspot.com\n\n");
 
-					Message msg = new MimeMessage(session);
-					msg.setFrom(new InternetAddress("n3phele@gmail.com", "n3phele"));
-					msg.addRecipient(Message.RecipientType.TO,
-							new InternetAddress(to, firstName
-									+ " " + lastName));
-					msg.setSubject(subject.toString());
-					msg.setText(body.toString());
-					Transport.send(msg);
+			Properties props = new Properties();
+			Session session = Session.getDefaultInstance(props, null);
 
-			} catch (AddressException e) {
-				log.log(Level.SEVERE,
-						"Email to " + to, e);
-			} catch (MessagingException e) {
-				log.log(Level.SEVERE,
-						"Email to " + to, e);
-			} catch (UnsupportedEncodingException e) {
-				log.log(Level.SEVERE,
-						"Email to " + to, e);
-			} catch (Exception e) {
-				log.log(Level.SEVERE,
-						"Email to " + to, e);
-			}
+			Message msg = new MimeMessage(session);
+			msg.setFrom(new InternetAddress("n3phele@gmail.com", "n3phele"));
+			msg.addRecipient(Message.RecipientType.TO, new InternetAddress(to, firstName
+					+ " " + lastName));
+			msg.setSubject(subject.toString());
+			msg.setText(body.toString());
+			Transport.send(msg);
+
+		} catch (AddressException e)
+		{
+			log.log(Level.SEVERE, "Email to " + to, e);
+		} catch (MessagingException e)
+		{
+			log.log(Level.SEVERE, "Email to " + to, e);
+		} catch (UnsupportedEncodingException e)
+		{
+			log.log(Level.SEVERE, "Email to " + to, e);
+		} catch (Exception e)
+		{
+			log.log(Level.SEVERE, "Email to " + to, e);
+		}
 	}
 
 	private boolean checkSecurityGroup(String groupName, String id, String secret, URI location, String locationId)
 	{
-		HPCloudManager hpcManager = new HPCloudManager( new HPCloudCredentials(id, secret) );
-		
+		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(id, secret));
+
 		return hpcManager.checkSecurityGroup(groupName, locationId);
 	}
 	
-	public void sendSecurityGroupNotificationEmail(String securityGroup, String to, String firstName, String lastName, URI location) {
-		try {
+	public void sendSecurityGroupNotificationEmail(String securityGroup, String to, String firstName, String lastName, URI location)
+	{
+		try
+		{
 			StringBuilder subject = new StringBuilder();
 			StringBuilder body = new StringBuilder();
-				subject.append("Auto-generated security group: \"");
-				subject.append(securityGroup);
-				subject.append("\"");
-				body.append(firstName);
-				body.append(",\n\nA security group named \"");
-				body.append(securityGroup);
-				body.append("\" has been generated for you. \n\n");
-				body.append("This is used as the default firewall for machines");
-				body.append(" run on your behalf on ");
-				body.append(location.toString());
-				body.append(".\n\nn3phele\n--\nhttps://n3phele.appspot.com\n\n");
-				
-				Properties props = new Properties();
-				Session session = Session.getDefaultInstance(props, null);
+			subject.append("Auto-generated security group: \"");
+			subject.append(securityGroup);
+			subject.append("\"");
+			body.append(firstName);
+			body.append(",\n\nA security group named \"");
+			body.append(securityGroup);
+			body.append("\" has been generated for you. \n\n");
+			body.append("This is used as the default firewall for machines");
+			body.append(" run on your behalf on ");
+			body.append(location.toString());
+			body.append(".\n\nn3phele\n--\nhttps://n3phele.appspot.com\n\n");
 
-				Message msg = new MimeMessage(session);
-				msg.setFrom(new InternetAddress("n3phele@gmail.com", "n3phele"));
-				msg.addRecipient(Message.RecipientType.TO, new InternetAddress(to, firstName + " " + lastName));
-				msg.setSubject(subject.toString());
-				msg.setText(body.toString());
-				Transport.send(msg);
+			Properties props = new Properties();
+			Session session = Session.getDefaultInstance(props, null);
 
-		} catch (AddressException e) {
-			log.log(Level.SEVERE,
-					"Email to " + to, e);
-		} catch (MessagingException e) {
-			log.log(Level.SEVERE,
-					"Email to " + to, e);
-		} catch (UnsupportedEncodingException e) {
-			log.log(Level.SEVERE,
-					"Email to " + to, e);
-		} catch (Exception e) {
-			log.log(Level.SEVERE,
-					"Email to " + to, e);
+			Message msg = new MimeMessage(session);
+			msg.setFrom(new InternetAddress("n3phele@gmail.com", "n3phele"));
+			msg.addRecipient(Message.RecipientType.TO, new InternetAddress(to, firstName
+					+ " " + lastName));
+			msg.setSubject(subject.toString());
+			msg.setText(body.toString());
+			Transport.send(msg);
+
+		} catch (AddressException e)
+		{
+			log.log(Level.SEVERE, "Email to " + to, e);
+		} catch (MessagingException e)
+		{
+			log.log(Level.SEVERE, "Email to " + to, e);
+		} catch (UnsupportedEncodingException e)
+		{
+			log.log(Level.SEVERE, "Email to " + to, e);
+		} catch (Exception e)
+		{
+			log.log(Level.SEVERE, "Email to " + to, e);
 		}
 
-
-}
+	}
 	
 	private boolean makeSecurityGroup(String groupName, String id, String secret, URI location, String to, String firstName, String lastName, String locationId)
 	{
-		HPCloudManager hpcManager = new HPCloudManager( new HPCloudCredentials(id, secret) );
-		
-		//FIXME: Find how to get zone
+		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(id, secret));
+
 		SecurityGroup sg = hpcManager.createSecurityGroup(groupName, locationId);
 		sendSecurityGroupNotificationEmail(sg.getName(), to, firstName, lastName, location);
-		
+
 		return true;
 	}
 
 	private static class VirtualServerManager extends AbstractManager<VirtualServer> {
-		
+
 		@Override
-		protected URI myPath() {
+		protected URI myPath()
+		{
 			return UriBuilder.fromUri(Resource.get("baseURI", "http://localhost:8889/resources")).path("virtualServer").build();
 		}
 
 		@Override
-		protected GenericModelDao<VirtualServer> itemDaoFactory(boolean transactional) {
+		protected GenericModelDao<VirtualServer> itemDaoFactory(boolean transactional)
+		{
 			return new ServiceModelDao<VirtualServer>(VirtualServer.class, transactional);
 		}
 	}
@@ -1200,8 +1201,8 @@ public class VirtualServerResource {
 
 	/*
 	 * Factory parameters
+	 * TODO: Review our input and output parameters
 	 */
-	
 	public final static TypedParameter inputParameters[] =  {
 		new TypedParameter("availabilityZone", "Specifies the placement constraints (Availability Zones) for launching the instances.", ParameterType.String, "", ""),
 		new TypedParameter("groupName", "Specifies the name of a placement group. Cannot be used for spot instances", ParameterType.String, "", ""),
@@ -1216,7 +1217,6 @@ public class VirtualServerResource {
 		new TypedParameter("locationId", "Unique ID of hpcloud zone. Valid Values: az-1.region-a.geo-1 | az-2.region-a.geo-1 | az-3.region-a.geo-1", ParameterType.String, "", ""),
 		new TypedParameter("monitoring", "Specifies whether monitoring is enabled for the instance.", ParameterType.Boolean, "", "false"),
 		new TypedParameter("securityGroups", "Name of the security group which controls the open TCP/IP ports for the VM.", ParameterType.String, "", ""),
-		new TypedParameter("spotPrice", "Maximum hourly price for instance. If not specified then an on-demand instance is used", ParameterType.Double, "", ""),
 		new TypedParameter("userData", "Base64-encoded MIME user data made available to the instance(s). May be used to pass startup commands.", ParameterType.String, "value", "default")
 	};
 	
