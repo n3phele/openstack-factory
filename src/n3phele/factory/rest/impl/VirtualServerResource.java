@@ -17,9 +17,7 @@
  package n3phele.factory.rest.impl;
 
 import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
 import java.net.URI;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -27,7 +25,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -49,38 +46,36 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
-import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 
-import org.jclouds.openstack.v2_0.domain.Link.Relation;
-import org.jclouds.openstack.nova.v2_0.domain.KeyPair;
-import org.jclouds.openstack.nova.v2_0.domain.SecurityGroup;
-import org.jclouds.openstack.nova.v2_0.domain.Server;
-import org.jclouds.openstack.nova.v2_0.domain.ServerCreated;
-import org.jclouds.openstack.nova.v2_0.domain.Server.Status;
-import org.jclouds.openstack.v2_0.domain.Link;
-
 import n3phele.factory.hpcloud.HPCloudCreateServerRequest;
 import n3phele.factory.hpcloud.HPCloudCreateServerResponse;
 import n3phele.factory.hpcloud.HPCloudCredentials;
 import n3phele.factory.hpcloud.HPCloudManager;
 import n3phele.factory.model.ServiceModelDao;
+import n3phele.service.core.NotFoundException;
 import n3phele.service.core.Resource;
 import n3phele.service.model.core.AbstractManager;
 import n3phele.service.model.core.BaseEntity;
 import n3phele.service.model.core.Collection;
-import n3phele.service.model.core.CreateVirtualServerResponse;
 import n3phele.service.model.core.ExecutionFactoryCreateRequest;
 import n3phele.service.model.core.GenericModelDao;
-import n3phele.service.core.NotFoundException;
 import n3phele.service.model.core.NameValue;
 import n3phele.service.model.core.ParameterType;
 import n3phele.service.model.core.TypedParameter;
 import n3phele.service.model.core.VirtualServer;
+
+import org.jclouds.openstack.nova.v2_0.domain.KeyPair;
+import org.jclouds.openstack.nova.v2_0.domain.RebootType;
+import org.jclouds.openstack.nova.v2_0.domain.SecurityGroup;
+import org.jclouds.openstack.nova.v2_0.domain.Server;
+import org.jclouds.openstack.nova.v2_0.domain.Server.Status;
+import org.jclouds.openstack.nova.v2_0.domain.ServerCreated;
+
 import com.google.apphosting.api.DeadlineExceededException;
 import com.googlecode.objectify.Key;
 import com.sun.jersey.api.client.Client;
@@ -89,16 +84,18 @@ import com.sun.jersey.api.client.WebResource;
 
 /** EC2 Virtual Server Resource manages the lifecycle of virtual machines on Amazon EC2 (or compatible) clouds.
  * @author Nigel Cook
- *
+ * @author Alexandre Leites
+ * @author Cristina Scheibler
  */
 @Path("/")
 public class VirtualServerResource {
-	private Client client = null;
-	private final static Logger log = Logger
-			.getLogger(VirtualServerResource.class.getName());
-	
-	private final VirtualServerManager manager;
-	public VirtualServerResource() {
+	private Client						client	= null;
+	private final VirtualServerManager	manager;
+	private final static Logger			log		= Logger.getLogger(VirtualServerResource.class.getName());
+	private final static String FACTORY_NAME	= "nova-factory";
+
+	public VirtualServerResource()
+	{
 		manager = new VirtualServerManager();
 	}
 
@@ -139,23 +136,17 @@ public class VirtualServerResource {
 	@Path("virtualServer/accountTest")
 	public String accountTest(@DefaultValue("false") @FormParam("fix") Boolean fix, @FormParam("id") String id, @FormParam("secret") String secret, @FormParam("key") String key, @FormParam("location") URI location, @FormParam("locationId") String locationId, @FormParam("email") String email, @FormParam("firstName") String firstName, @FormParam("lastName") String lastName, @FormParam("securityGroup") String securityGroup)
 	{
-
-		// TODO implement this using jcloud
 		log.info("accountTest with fix " + fix);
-		if (fix && (email == null || email.trim().length() == 0)
-				|| (firstName == null || firstName.trim().length() == 0)
-				|| (lastName == null || lastName.trim().length() == 0))
+		if (fix && (email == null || email.trim().length() == 0) || (firstName == null || firstName.trim().length() == 0) || (lastName == null || lastName.trim().length() == 0))
 			throw new IllegalArgumentException("email details must be supplied with option to fix");
+		
 		boolean resultKey = checkKey(key, id, secret, location, locationId);
 		if (!resultKey && fix)
-		{
 			resultKey = createKey(key, id, secret, location, email, firstName, lastName, locationId);
-		}
+		
 		boolean result = checkSecurityGroup(securityGroup, id, secret, location, locationId);
 		if (!result && fix)
-		{
 			result = makeSecurityGroup(securityGroup, id, secret, location, email, firstName, lastName, locationId);
-		}
 
 		String reply = "";
 		if (!resultKey)
@@ -181,7 +172,6 @@ public class VirtualServerResource {
 	@Path("virtualServer")
 	public Collection<BaseEntity> list(@DefaultValue("false") @QueryParam("summary") Boolean summary)
 	{
-
 		log.info("get entered with summary " + summary);
 
 		Collection<BaseEntity> result = getCollection().collection(summary);
@@ -197,7 +187,6 @@ public class VirtualServerResource {
 	@Path("virtualServer/inputParameters")
 	public TypedParameter[] inputParameterList()
 	{
-
 		return inputParameters;
 	}
 	
@@ -210,7 +199,6 @@ public class VirtualServerResource {
 	@Path("virtualServer/outputParameters")
 	public TypedParameter[] outputParameterList()
 	{
-
 		return outputParameters;
 	}
 	
@@ -235,12 +223,11 @@ public class VirtualServerResource {
 		HPCloudCreateServerRequest hpcRequest = new HPCloudCreateServerRequest();
 		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(r.accessKey, r.encryptedSecret));
 
-		// TODO: Fix 'zombie' and 'debug' implementation
-		if ("zombie".equalsIgnoreCase(r.name)
-				|| "debug".equalsIgnoreCase(r.name))
+		// TODO: We doesn't need it anymore, correct?
+		/*if ("zombie".equalsIgnoreCase(r.name) || "debug".equalsIgnoreCase(r.name))
 		{
 			r.name = r.name.toUpperCase();
-		}
+		}*/
 
 		if (!r.name.startsWith("n3phele-"))
 		{
@@ -360,7 +347,6 @@ public class VirtualServerResource {
 	@RolesAllowed("authenticated")
 	public VirtualServer get(@PathParam("id") Long id) throws NotFoundException
 	{
-
 		VirtualServer item = deepGet(id);
 
 		return item;
@@ -396,7 +382,6 @@ public class VirtualServerResource {
 					delete(virtualServer);
 			}
 		}
-
 	}
 	
 	
@@ -452,53 +437,53 @@ public class VirtualServerResource {
 		}
 	}
 	
-	private void makeZombie(VirtualServer item, UUID reference, int sequence) throws Exception {
-
+	private void makeZombie(VirtualServer item, UUID reference, int sequence) throws Exception
+	{
 		String instanceId = item.getInstanceId();
-		try {
-			//TODO implement this using jcloud
-			/*AmazonEC2 client = null;
-			client = getEC2Client(item.getAccessKey(),
-					item.getEncryptedKey(), item.getLocation());
-
-			try {
-				client.createTags(new CreateTagsRequest()
-						.withResources(instanceId)
-						.withTags(new Tag("Name", "zombie"),
-								new Tag("n3phele-factory", Resource.get("factoryName", "ec2Factory")),
-								new Tag("n3phele-uri", "")));
-			} catch (Exception ex) {
-				log.log(Level.WARNING, "Cant set tag for "
-						+ instanceId
-						+ " associated with " + item.getName(), ex);
-				// throw ex; // openstack ec2 cant do this for now. Just ignore.
-			}*/
-			
-			// client.rebootInstances(new RebootInstancesRequest().withInstanceIds(instanceId));		
+		try
+		{
+			HPCloudCredentials credentials = new HPCloudCredentials(item.getAccessKey(), item.getEncryptedKey());
+			HPCloudManager hpcManager = new HPCloudManager(credentials);
 			item.setInstanceId(null);
 			item.setZombie(true);
-			updateStatus(item, "Terminated",  reference, sequence);
+			updateStatus(item, "Terminated", reference, sequence);
 			update(item);
-			/*
-			 * Create a new zombie virtualServer object, and then set item instance Id to null.
-			 * Update item.
-			 * Update status. 
+
+			/**
+			 * Now we're using metadata to set instance behavior (zombie or debug)
 			 */
-			VirtualServer clone = new VirtualServer("zombie", item.getDescription(), item.getLocation(),
-					item.getParameters(), null, item.getAccessKey(), item.getEncryptedKey(), item.getOwner(), item.getIdempotencyKey());
+			String locationId = getLocationId(item);
+			Map<String, String> tags = new HashMap<String, String>();
+			tags.put("n3phele-name", item.getName());
+			tags.put("n3phele-behavior", "zombie");
+			tags.put("n3phele-factory", Resource.get("factoryName", FACTORY_NAME));
+			tags.put("n3phele-uri", "");
+
+			hpcManager.putServerTags(item.getInstanceId(), locationId, tags);
+			
+			hpcManager.rebootNode(locationId, item.getInstanceId(), RebootType.SOFT);
+
+			/**
+			 * Create a new zombie virtualServer object, and then set item
+			 * instance Id to null. Update item. Update status.
+			 */
+			VirtualServer clone = new VirtualServer("zombie", item.getDescription(), item.getLocation(), item.getParameters(), null, item.getAccessKey(), item.getEncryptedKey(), item.getOwner(), item.getIdempotencyKey());
 			clone.setCreated(item.getCreated());
 			clone.setInstanceId(instanceId);
 
-
-			//
-			// The add operation does two writes in order to fix the reference URI.
-			// This creates a race condition for a fetch based on name of zombie
-			// Similarly, refresh amd update could cause a race condition. Updates semantics
-			// need to be strengthened to fail if the object is not in the store, and the check and write wrapped in
-			// a transaction.
-			//
+			/**
+			 * The add operation does two writes in order to fix the reference
+			 * URI.
+			 * This creates a race condition for a fetch based on name of zombie
+			 * Similarly, refresh amd update could cause a race condition.
+			 * Updates semantics
+			 * need to be strengthened to fail if the object is not in the
+			 * store, and the check and write wrapped in
+			 * a transaction.
+			 */
 			add(clone);
-		} catch (Exception e) {
+		} catch (Exception e)
+		{
 			log.log(Level.SEVERE, "makeZombie delete of instanceId " + instanceId, e);
 			deleteInstance(item, UUID.randomUUID(), 0);
 			throw e;
@@ -506,47 +491,42 @@ public class VirtualServerResource {
 
 	}
 	
-	private void makeDebug(VirtualServer item, UUID reference, int sequence) throws Exception {
-
+	private void makeDebug(VirtualServer item, UUID reference, int sequence) throws Exception
+	{
 		String instanceId = item.getInstanceId();
-		try {
-			
-			
-			HPCloudCredentials credentials = new HPCloudCredentials(item.getAccessKey(),item.getEncryptedKey());
-			HPCloudManager hpManager = new HPCloudManager(credentials);	
+		try
+		{
+			HPCloudCredentials credentials = new HPCloudCredentials(item.getAccessKey(), item.getEncryptedKey());
+			HPCloudManager hpcManager = new HPCloudManager(credentials);
 			item.setInstanceId(null);
 			item.setZombie(true);
-			updateStatus(item, "Terminated",  reference, sequence);
+			updateStatus(item, "Terminated", reference, sequence);
 			update(item);
-			
-			//TODO implement tags
-			/*
-			try {
-				client.createTags(new CreateTagsRequest()
-						.withResources(instanceId)
-						.withTags(new Tag("Name", "debug"),
-								new Tag("n3phele-factory", Resource.get("factoryName", "ec2Factory")),
-								new Tag("n3phele-uri", "")));
-			} catch (Exception ex) {
-				log.log(Level.WARNING, "Cant set tag for "
-						+ instanceId
-						+ " associated with " + item.getName(), ex);
-				throw ex;
-			}*/
-			/*
-			 * Create a new zombie virtualServer object, and then set item instance Id to null.
-			 * Update item.
-			 * Update status. 
+
+			/**
+			 * Now we're using metadata to set instance behavior (zombie or debug)
 			 */
-			VirtualServer clone = new VirtualServer("debug", item.getDescription(), item.getLocation(),
-					item.getParameters(), null, item.getAccessKey(), item.getEncryptedKey(), item.getOwner(), item.getIdempotencyKey());
+			String locationId = getLocationId(item);
+			Map<String, String> tags = new HashMap<String, String>();
+			tags.put("n3phele-name", item.getName());
+			tags.put("n3phele-behavior", "debug");
+			tags.put("n3phele-factory", Resource.get("factoryName", FACTORY_NAME));
+			tags.put("n3phele-uri", "");
+
+			hpcManager.putServerTags(item.getInstanceId(), locationId, tags);
+
+			/**
+			 * Create a new zombie virtualServer object, and then set item
+			 * instance Id to null. Update item. Update status.
+			 */
+			VirtualServer clone = new VirtualServer("debug", item.getDescription(), item.getLocation(), item.getParameters(), null, item.getAccessKey(), item.getEncryptedKey(), item.getOwner(), item.getIdempotencyKey());
 			clone.setCreated(item.getCreated());
 			clone.setInstanceId(instanceId);
 
 			add(clone);
-		} catch (Exception e) {
-			log.log(Level.SEVERE, "makeDebug delete of instanceId " + instanceId,
-					e);
+		} catch (Exception e)
+		{
+			log.log(Level.SEVERE, "makeDebug delete of instanceId "	+ instanceId, e);
 			item.setInstanceId(instanceId);
 			deleteInstance(item, UUID.randomUUID(), 0);
 			throw e;
@@ -561,20 +541,19 @@ public class VirtualServerResource {
 
 		if (result)
 		{
-			if (virtualServer.getSiblings() != null
-					&& virtualServer.getSiblings().size() > 1)
+			if (virtualServer.getSiblings() != null	&& virtualServer.getSiblings().size() > 1)
 			{
-				log.info("Server has " + virtualServer.getSiblings().size()
-						+ " siblings");
+				log.info("Server has " + virtualServer.getSiblings().size()	+ " siblings");
 				result = false;
-			} else
+			}
+			else
 			{
-				if (virtualServer.getSpotId() != null
-						&& virtualServer.getSpotId().length() != 0)
+				if (virtualServer.getSpotId() != null && virtualServer.getSpotId().length() != 0)
 				{
 					log.info("Server is spot instance");
 					result = false;
-				} else if (!virtualServer.getStatus().equalsIgnoreCase(Status.ACTIVE.toString()))
+				}
+				else if (!virtualServer.getStatus().equalsIgnoreCase(Status.ACTIVE.toString())) //TODO: Verify if we're using correct status
 				{
 					log.info("Server is " + virtualServer.getStatus());
 					result = false;
@@ -626,28 +605,19 @@ public class VirtualServerResource {
 
 		if (madeIntoZombie)
 		{
+			//TODO: Should we consider to use the Enums instead of hard coded string?
 			if (updateStatus(item, "terminated", reference, sequence))
 				update(item);
+			
 			if (item.getStatus().equals("terminated"))
 			{
-				log.warning("Instance " + item.getName()
-						+ " terminated .. purging");
+				log.warning("Instance " + item.getName() + " terminated .. purging");
 				delete(item);
 				return;
 			}
 		} else if (instanceId != null && instanceId.length() > 0)
 		{
-			ArrayList<NameValue> listParameters = item.getParameters();
-			String locationId = null;
-
-			for (NameValue p : listParameters)
-			{
-				if (p.getKey().equalsIgnoreCase("locationId"))
-				{
-					locationId = p.getValue();
-					break;
-				}
-			}
+			String locationId = getLocationId(item);
 
 			Server s = hpcManager.getServerById(locationId, item.getInstanceId());
 			if (s != null)
@@ -658,12 +628,11 @@ public class VirtualServerResource {
 				 * If the statuses are different, and the current cloud status
 				 * is ACTIVE (Running), we should update.
 				 */
-				if (!item.getStatus().equalsIgnoreCase(currentStatus.toString())
-						&& currentStatus.compareTo(Status.ACTIVE) == 0)
+				if (!item.getStatus().equalsIgnoreCase(currentStatus.toString()) && currentStatus.compareTo(Status.ACTIVE) == 0)  //TODO: Verify if we're using correct status
 				{
 					Map<String, String> tags = new HashMap<String, String>();
-					tags.put("Name", item.getName());
-					tags.put("n3phele-factory", Resource.get("factoryName", "openstack-factory"));
+					tags.put("n3phele-name", item.getName());
+					tags.put("n3phele-factory", Resource.get("factoryName", FACTORY_NAME));
 					tags.put("n3phele-uri", item.getUri().toString());
 
 					hpcManager.putServerTags(item.getInstanceId(), locationId, tags);
@@ -672,30 +641,24 @@ public class VirtualServerResource {
 				if (updateStatus(item, currentStatus.toString(), reference, sequence))
 					update(item);
 
+				//TODO: Should we consider to use the Enums instead of hard coded string?
 				if (item.getStatus().equals("terminated"))
 				{
-					log.warning("Instance " + item.getInstanceId()
-							+ " terminated .. purging");
+					log.warning("Instance " + item.getInstanceId() + " terminated .. purging");
 					delete(item);
 					return;
 				}
 			} else
 			{
-				log.warning("Instance " + item.getInstanceId()
-						+ " not found, assumed terminated .. purging");
+				log.warning("Instance " + item.getInstanceId() + " not found, assumed terminated .. purging");
 				delete(item);
 				return;
 			}
 		}
 	}
 	
-	private void refreshVirtualServer(VirtualServer item)
+	private String getLocationId(VirtualServer item)
 	{
-		if (item == null)
-			return;
-
-		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(item.getAccessKey(), item.getEncryptedKey()));
-
 		ArrayList<NameValue> listParameters = item.getParameters();
 		String locationId = null;
 
@@ -707,6 +670,19 @@ public class VirtualServerResource {
 				break;
 			}
 		}
+		
+		return locationId;
+	}
+
+
+	private void refreshVirtualServer(VirtualServer item)
+	{
+		if (item == null)
+			return;
+
+		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(item.getAccessKey(), item.getEncryptedKey()));
+
+		String locationId = getLocationId(item);
 
 		Server s = hpcManager.getServerById(locationId, item.getInstanceId());
 		if (s != null)
@@ -715,8 +691,7 @@ public class VirtualServerResource {
 			item.setStatus(currentStatus.toString());
 		} else
 		{
-			log.warning("Instance " + item.getInstanceId()
-					+ " not found, assumed terminated ..");
+			log.warning("Instance " + item.getInstanceId() + " not found, assumed terminated ..");
 			item.setStatus(Status.DELETED.toString());
 		}
 	}
@@ -725,43 +700,57 @@ public class VirtualServerResource {
 	 * @param s virtual server
 	 * @return TRUE if zombie
 	 */
-	private boolean checkForZombieExpiry(VirtualServer s) {
-		boolean debugInstance = s.getName().equalsIgnoreCase("debug");
-		boolean zombieInstance = s.getName().equalsIgnoreCase("zombie");
-		if(zombieInstance || debugInstance ) {
-			refreshVirtualServer(s);
-			//TODO implement this using jcloud
-			/*if(s.getStatus().equalsIgnoreCase(InstanceStateName.Terminated.toString())) {
+	private boolean checkForZombieExpiry(VirtualServer s)
+	{
+		boolean debugInstance = false;
+		boolean zombieInstance = false;
+		ArrayList<NameValue> listParameters = s.getParameters();
+		
+		for(NameValue p : listParameters)
+		{
+			if( p.getKey().equalsIgnoreCase("n3phele-behavior") )
+			{
+				if( p.getValue().equalsIgnoreCase("debug") )
+					debugInstance = true;
+				else if( p.getValue().equalsIgnoreCase("zombie") )
+					zombieInstance = true;
+				
+				break;
+			}
+		}
+		
+		if(zombieInstance || debugInstance )
+		{
+			HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(s.getAccessKey(), s.getEncryptedKey()));
+			
+			//TODO: Verify if we're using correct status
+			if( s.getStatus().equalsIgnoreCase(Status.DELETED.toString()) )
+			{
 				log.info("Found dead "+s.getName()+" with id "+s.getInstanceId()+" created "+s.getCreated());
 				manager.delete(s);
 				return true;
-			}*/
+			}
+			
 			long created = s.getCreated().getTime();
 			long now = new Date().getTime();
-			long age = ((now - created)% (60*60*1000))/60000; // minutes into hourly cycle
-			//TODO implement this using jcloud
-			/*if(age > 55 || s.getName().equals("Zombie") || s.getName().equals("Debug") || !s.getStatus().equalsIgnoreCase(InstanceStateName.Running.toString())) {
+			long age = ((now - created)% (60*60*1000))/60000;
+			
+			//TODO: Verify if we're using correct status
+			if(age > 55 || !s.getStatus().equalsIgnoreCase(Status.ACTIVE.toString()) || debugInstance || zombieInstance )
+			{
 				log.info("Killing "+s.getName()+" with id "+s.getInstanceId()+" created "+s.getCreated());
-				s.setName(debugInstance? "Debug" : "Zombie");
+				s.setName(debugInstance? "debug" : "zombie");
 				update(s);
-				try {
-					AmazonEC2 client = null;
-					client = getEC2Client(s.getAccessKey(),
-							s.getEncryptedKey(), s.getLocation());
-					TerminateInstancesResult result = client
-							.terminateInstances((new TerminateInstancesRequest())
-									.withInstanceIds(s.getInstanceId()));
-					log.info("Terminated "+result.getTerminatingInstances().size());
-				} catch (Exception e) {
-					log.log(Level.SEVERE, "Failed to delete zombie", e);
-				} 
-				return true;
-			}*/
+				
+				String locationId = getLocationId(s);
+				hpcManager.terminateNode(locationId, s.getInstanceId());
+			}
 		}
 		return false;
 	}
 
-	private Collection<BaseEntity> refreshCollection() {
+	private Collection<BaseEntity> refreshCollection()
+	{
 		Collection<VirtualServer> servers = getCollection();
 		Collection<BaseEntity> result = servers.collection(true);
 		UUID reference = UUID.randomUUID();
@@ -799,29 +788,18 @@ public class VirtualServerResource {
 		String instanceId = item.getInstanceId();
 		try
 		{
-
-			if (!item.getStatus().equalsIgnoreCase("Terminated")
-					&& instanceId != null && instanceId.length() > 0)
+			//TODO: Should we consider to use the Enums instead of hard coded string?
+			if (!item.getStatus().equalsIgnoreCase("Terminated") && instanceId != null && instanceId.length() > 0)
 			{
 
 				HPCloudCredentials credentials = new HPCloudCredentials(item.getAccessKey(), item.getEncryptedKey());
 				HPCloudManager hpManager = new HPCloudManager(credentials);
 
-				String locationId = null;
-				ArrayList<NameValue> listParameters = item.getParameters();
-				for (NameValue p : listParameters)
-				{
-					if (p.getKey().equalsIgnoreCase("locationId"))
-					{
-						locationId = p.getValue();
-						break;
-					}
-				}
+				String locationId = getLocationId(item);
 
 				if (locationId == null)
 				{
-					log.log(Level.SEVERE, "locationId is null, cannot delete instance "
-							+ item.getInstanceId(), new IllegalArgumentException("locationId: null"));
+					log.log(Level.SEVERE, "locationId is null, cannot delete instance "	+ item.getInstanceId(), new IllegalArgumentException("locationId: null"));
 					throw new IllegalArgumentException("locationId: null");
 				}
 
@@ -831,21 +809,17 @@ public class VirtualServerResource {
 				{
 					log.warning("Instance " + item.getInstanceId() + "deleted");
 					if (updateStatus(item, "Terminated", reference, sequence))
-					{
 						update(item);
-					}
+					
 				} else
 				{
-					log.warning("Instance " + item.getInstanceId()
-							+ "could not be deleted");
+					log.warning("Instance " + item.getInstanceId() + "could not be deleted");
 				}
-
-			} else
+			}
+			else
 			{
 				if (updateStatus(item, "Terminated", reference, sequence))
-				{
 					update(item);
-				}
 			}
 
 		} catch (Exception e)
@@ -856,73 +830,87 @@ public class VirtualServerResource {
 
 	}
 	
-	private boolean createWithZombie(VirtualServer item) {
+	private boolean createWithZombie(VirtualServer item)
+	{
 		List<VirtualServer> zombies = getZombie();
-		if(zombies != null) {
-			log.info("Got "+zombies.size()+" Zombies ");
-			zombieCheck: for(VirtualServer s : zombies) {
+		if (zombies != null)
+		{
+			log.info("Got " + zombies.size() + " Zombies ");
+			zombieCheck: for (VirtualServer s : zombies)
+			{
 				boolean locationMatch = s.getLocation().equals(item.getLocation());
 				boolean accessMatch = s.getAccessKey().equals(item.getAccessKey());
 				boolean secretMatch = s.getEncryptedKey().equals(item.getEncryptedKey());
-				log.info(" Zombie "+s.getInstanceId()+" location "+locationMatch+
-						" access "+accessMatch+" secret "+secretMatch);
-				if(locationMatch && accessMatch && secretMatch) {
-					Map<String,String> map = s.getParametersMap();
-					for(NameValue x : item.getParameters()) {
-						if(!SafeEquals(x.getValue(), map.get(x.getKey()))) {
-							log.info("Mismatch on "+x.getKey()+" need "+x.getValue()+" zombie "+map.get(x.getKey()));
+				log.info(" Zombie " + s.getInstanceId() + " location "+ locationMatch + " access " + accessMatch + " secret "+ secretMatch);
+				
+				if (locationMatch && accessMatch && secretMatch)
+				{
+					Map<String, String> map = s.getParametersMap();
+					for (NameValue x : item.getParameters())
+					{
+						if (!SafeEquals(x.getValue(), map.get(x.getKey())))
+						{
+							log.info("Mismatch on " + x.getKey() + " need "+ x.getValue() + " zombie "+ map.get(x.getKey()));
 							continue zombieCheck;
 						}
 					}
+					
 					// zombie matches
-
 					GenericModelDao<VirtualServer> itemDaoTxn = null;
 					boolean claimed = false;
-					try {
+					try
+					{
 						itemDaoTxn = manager.itemDaoFactory(true);
 						VirtualServer zombie = itemDaoTxn.get(s.getId());
-							zombie.setIdempotencyKey(new Date().toString());
-							itemDaoTxn.put(zombie);
-							itemDaoTxn.delete(zombie);
-							itemDaoTxn.ofy().getTxn().commit();
-							claimed = true;
-					} catch (Exception e) {
+						zombie.setIdempotencyKey(new Date().toString());
+						itemDaoTxn.put(zombie);
+						itemDaoTxn.delete(zombie);
+						itemDaoTxn.ofy().getTxn().commit();
+						claimed = true;
+					} catch (Exception e)
+					{
 						log.log(Level.WARNING, "Zombie processing contention", e);
-					} finally {
-						if(itemDaoTxn.ofy().getTxn().isActive())
+					} finally
+					{
+						if (itemDaoTxn.ofy().getTxn().isActive())
 							itemDaoTxn.ofy().getTxn().rollback();
 					}
-					if(claimed) {
-//						List<VirtualServer> leftOverZombies = getZombie();
-//						if(leftOverZombies != null) {
-//							log.info("Got "+leftOverZombies.size()+" zombies remaining");
-//						} else {
-//							log.info("Got 0 Zombies remaining");
-//						}
-						log.info("Claimed "+s.getInstanceId());
+					if (claimed)
+					{
+						List<VirtualServer> leftOverZombies = getZombie();
+						if (leftOverZombies != null)
+							log.info("Got " + leftOverZombies.size() + " zombies remaining");
+						else
+							log.info("Got 0 Zombies remaining");
+						
+						log.info("Claimed " + s.getInstanceId());
 						refreshVirtualServer(s);
-						//TODO implement this using jcloud
-						/*if(!s.getStatus().equalsIgnoreCase(InstanceStateName.Running.toString())) {
+						
+						//TODO: Verify if we're using correct status
+						if( !s.getStatus().equalsIgnoreCase(Status.ACTIVE.toString()) )
+						{
 							terminate(s);
 							continue;
 						}
 						item.setInstanceId(s.getInstanceId());
 						item.setCreated(s.getCreated());
 						updateVirtualServer(item, UUID.randomUUID(), 0);
-						if(item.getStatus().equalsIgnoreCase(InstanceStateName.Running.toString())){
+						
+						//TODO: Verify if we're using correct status
+						if( item.getStatus().equalsIgnoreCase(Status.ACTIVE.toString()) )
 							return true;
-						} else {
-							continue;	
-						}*/
-					} else {
-						log.warning("Zombie contention on "+s.getInstanceId());
+						else
+							continue; // There's no difference calling continue here, i think.
+						
+					} else
+					{
+						log.warning("Zombie contention on " + s.getInstanceId());
 					}
 				}
 			}
 		}
 		
 		return false;
-	
 	}
 	
 	private boolean SafeEquals(String a, String b)
@@ -946,15 +934,12 @@ public class VirtualServerResource {
 			sendNotification(s, oldStatus.toLowerCase(), newStatus, reference.toString(), sequence);
 		} catch (Exception e)
 		{
-			log.log(Level.INFO, "SendNotification exception to <"
-					+ s.getNotification() + "> from " + s.getUri() + " old: "
-					+ oldStatus + " new: " + s.getStatus(), e);
+			log.log(Level.INFO, "SendNotification exception to <" + s.getNotification() + "> from " + s.getUri() + " old: " + oldStatus + " new: " + s.getStatus(), e);
 			if (oldStatus.equals(newStatus.toUpperCase()))
 			{
-				log.warning("Cancelling SendNotification to <"
-						+ s.getNotification() + "> from " + s.getUri()
-						+ " old: " + oldStatus + " new: " + s.getStatus());
-			} else
+				log.warning("Cancelling SendNotification to <" + s.getNotification() + "> from " + s.getUri() + " old: " + oldStatus + " new: " + s.getStatus());
+			}
+			else
 			{
 				s.setStatus(newStatus.toUpperCase());
 			}
@@ -962,12 +947,10 @@ public class VirtualServerResource {
 		return true;
 	}
 
-
 	private void sendNotification(VirtualServer s, String oldStatus, String newStatus, String reference, int sequence) throws Exception
 	{
 		URI notification = s.getNotification();
-		log.info("SendNotification to <" + notification + "> from "
-				+ s.getUri() + " old: " + oldStatus + " new: " + s.getStatus());
+		log.info("SendNotification to <" + notification + "> from " + s.getUri() + " old: " + oldStatus + " new: " + s.getStatus());
 
 		if (notification == null)
 			return;
@@ -982,8 +965,7 @@ public class VirtualServerResource {
 		log.info("Notificaion status " + response.getStatus());
 		if (response.getStatus() == 410)
 		{
-			log.severe("VM GONE .. killing " + s.getUri()
-					+ " silencing reporting to " + s.getNotification());
+			log.severe("VM GONE .. killing " + s.getUri() + " silencing reporting to " + s.getNotification());
 			s.setNotification(null);
 			deleteInstance(s, UUID.randomUUID(), 0);
 		}
