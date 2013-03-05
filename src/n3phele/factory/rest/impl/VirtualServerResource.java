@@ -971,16 +971,16 @@ public class VirtualServerResource {
 		}
 	}
 
-	private boolean checkKey(String key, String id, String secret, URI location, String locationId)
+	protected boolean checkKey(String key, String id, String secret, URI location, String locationId)
 	{
-		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(id, secret));
+		HPCloudManager hpcManager = createCloudManager(id, secret);
 
 		return hpcManager.checkKeyPair(key, locationId);
 	}
 
-	private boolean createKey(String key, String id, String secret, URI location, String email, String firstName, String lastName, String locationId)
+	protected boolean createKey(String key, String id, String secret, URI location, String email, String firstName, String lastName, String locationId)
 	{
-		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(id, secret));
+		HPCloudManager hpcManager = createCloudManager(id, secret);
 		KeyPair newKey = hpcManager.createKeyPair(key, locationId);
 
 		if (newKey != null)
@@ -992,6 +992,12 @@ public class VirtualServerResource {
 
 		log.severe("Key pair couldn't be created");
 		return false;
+	}
+
+	protected HPCloudManager createCloudManager(String id, String secret) 
+	{
+		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(id, secret));
+		return hpcManager;
 	}
 
 	public void sendNotificationEmail(KeyPair keyPair, String to, String firstName, String lastName, URI location)
@@ -1045,9 +1051,9 @@ public class VirtualServerResource {
 		}
 	}
 
-	private boolean checkSecurityGroup(String groupName, String id, String secret, URI location, String locationId)
+	protected boolean checkSecurityGroup(String groupName, String id, String secret, URI location, String locationId)
 	{
-		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(id, secret));
+		HPCloudManager hpcManager = createCloudManager(id, secret);
 
 		return hpcManager.checkSecurityGroup(groupName, locationId);
 	}
@@ -1097,9 +1103,9 @@ public class VirtualServerResource {
 
 	}
 	
-	private boolean makeSecurityGroup(String groupName, String id, String secret, URI location, String to, String firstName, String lastName, String locationId)
+	protected boolean makeSecurityGroup(String groupName, String id, String secret, URI location, String to, String firstName, String lastName, String locationId)
 	{
-		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(id, secret));
+		HPCloudManager hpcManager = createCloudManager(id, secret);
 
 		SecurityGroup sg = hpcManager.createSecurityGroup(groupName, locationId);
 		sendSecurityGroupNotificationEmail(sg.getName(), to, firstName, lastName, location);
