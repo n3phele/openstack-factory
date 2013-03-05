@@ -1,5 +1,7 @@
 /**
  * @author Nigel Cook
+ * @author Alexandre Leites
+ * @author Cristina Scheibler
  *
  * (C) Copyright 2010-2012. Nigel Cook. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
@@ -33,15 +35,15 @@ import n3phele.service.core.Resource;
 //import com.amazonaws.auth.AWSCredentials;
 import com.sun.jersey.core.util.Base64;
 
-public class EncryptedAWSCredentials{ // implements AWSCredentials {
-	protected static Logger log = Logger.getLogger(EncryptedAWSCredentials.class.getName());
+public class EncryptedHPCredentials {
+	protected static Logger log = Logger.getLogger(EncryptedHPCredentials.class.getName());
 	
 	private String accessKey;
 	private String secretKey;
 
 	private String password = Resource.get("factorySecret", "");
 
-	public EncryptedAWSCredentials(String encryptedAccessKey, String encryptedSecretKey) throws UnsupportedEncodingException, NoSuchAlgorithmException {
+	public EncryptedHPCredentials(String encryptedAccessKey, String encryptedSecretKey) throws UnsupportedEncodingException, NoSuchAlgorithmException {
 		this.accessKey = encryptedAccessKey;
 		this.secretKey = encryptedSecretKey;
 		decrypt(encryptedAccessKey, this.password);
@@ -109,8 +111,7 @@ public class EncryptedAWSCredentials{ // implements AWSCredentials {
 		
 	}
 
-	//@Override
-	public String getAWSAccessKeyId() {
+	public String getHPAccessKeyId() {
 		try {
 			return decrypt(this.accessKey, this.password);
 		} catch (UnsupportedEncodingException e) {
@@ -120,8 +121,7 @@ public class EncryptedAWSCredentials{ // implements AWSCredentials {
 		}
 	}
 
-	//@Override
-	public String getAWSSecretKey() {
+	public String getHPSecretKey() {
 		try {
 			return decrypt(this.secretKey, this.password);
 		} catch (UnsupportedEncodingException e) {
