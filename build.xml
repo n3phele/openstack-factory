@@ -54,22 +54,6 @@
         includeAntRuntime="true"
         debug="on" />
   </target>
-  
-  <target name="gwt_compile" depends="compile_tests" description="GWT compile to JavaScript">
-    <java failonerror="true" fork="true" classname="com.google.gwt.dev.Compiler">
-      <classpath>
-        <pathelement location="src"/>
-        <path refid="project.classpath"/>
-      </classpath>
-      <jvmarg value="-Xss16M" />
-      <arg value="n3phele.N3phele"/>
-    </java>
-  </target>
-
-  <target name="datanucleusenhance" depends="gwt_compile"
-      description="Performs JDO enhancement on compiled data classes.">
-    <enhance_war war="war" />
-  </target>
 
   <target name="compile_tests" depends="compile"
       description="Compiles Java source tests.">
@@ -86,13 +70,8 @@
       includeAntRuntime="true"
       />
   </target>
-
-	<target name="update" depends="datanucleusenhance"
-		description="Uploads the application to App Engine.">
-		<appcfg action="update" war="war" />
-	</target>
-
- <target name="tests" depends="datanucleusenhance">
+  
+ <target name="tests" depends="compile_tests">
     <junit fork="no" haltonfailure="yes">
       <test name="n3phele.factory.test.AllUnitTests" />
       <formatter type="plain" usefile="false" />
