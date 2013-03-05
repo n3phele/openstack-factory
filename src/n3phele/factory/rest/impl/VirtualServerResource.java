@@ -46,6 +46,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -105,28 +106,15 @@ public class VirtualServerResource {
 	@GET
 	@RolesAllowed("authenticated")
 	@Path("dump")
-	public String dump(@QueryParam("id") String id,
-			@QueryParam("key") String key,
-			@DefaultValue("https://ec2.amazonaws.com") @QueryParam("location") String location) {
-		log.info("Id="+id+" key="+key);
-		//TODO implement this using jcloud
-		/*ClientConfiguration clientConfiguration = new ClientConfiguration();
+	public String dump(@QueryParam("id") String id, @QueryParam("key") String key, @DefaultValue("https://ec2.amazonaws.com") @QueryParam("location") String location, @QueryParam("locationId") String locationId)
+	{
+		HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(id, key));
+		int count = hpcManager.getKeyPairsCount(locationId);
 
-		try {
-			clientConfiguration.setProtocol(Protocol.valueOf(URI.create(location).toURL()
-					.getProtocol().toUpperCase()));
-		} catch (MalformedURLException e) {
-			throw new WebApplicationException();
-		}
-		AmazonEC2Client client = new AmazonEC2Client(new BasicAWSCredentials(id, key),
-				clientConfiguration);
-		client.setEndpoint(location.toString());
-
-		DescribeKeyPairsResult result = client.describeKeyPairs();
-		log.info("Key pairs "+ result.getKeyPairs());
-
-		return(result.getKeyPairs().size()+" key pairs ");*/
-		return null;
+		if (count > 1)
+			return String.valueOf(count) + " key pairs";
+		else
+			return null;
 	}
 
 	
@@ -599,7 +587,7 @@ public class VirtualServerResource {
 
 	protected void updateVirtualServer(VirtualServer item, UUID reference, int sequence) throws IllegalArgumentException
 	{
-		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(item.getAccessKey(), item.getEncryptedKey()));
+		HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(item.getAccessKey(), item.getEncryptedKey()));
 		String instanceId = item.getInstanceId();
 		boolean madeIntoZombie = item.isZombie();
 
@@ -680,7 +668,7 @@ public class VirtualServerResource {
 		if (item == null)
 			return;
 
-		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(item.getAccessKey(), item.getEncryptedKey()));
+		HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(item.getAccessKey(), item.getEncryptedKey()));
 
 		String locationId = getLocationId(item);
 
@@ -721,7 +709,7 @@ public class VirtualServerResource {
 		
 		if(zombieInstance || debugInstance )
 		{
-			HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(s.getAccessKey(), s.getEncryptedKey()));
+			HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(s.getAccessKey(), s.getEncryptedKey()));
 			
 			//TODO: Verify if we're using correct status
 			if( s.getStatus().equalsIgnoreCase(Status.DELETED.toString()) )
@@ -973,14 +961,14 @@ public class VirtualServerResource {
 
 	protected boolean checkKey(String key, String id, String secret, URI location, String locationId)
 	{
-		HPCloudManager hpcManager = createCloudManager(id, secret);
+		HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(id, secret));
 
 		return hpcManager.checkKeyPair(key, locationId);
 	}
 
 	protected boolean createKey(String key, String id, String secret, URI location, String email, String firstName, String lastName, String locationId)
 	{
-		HPCloudManager hpcManager = createCloudManager(id, secret);
+		HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(id, secret));
 		KeyPair newKey = hpcManager.createKeyPair(key, locationId);
 
 		if (newKey != null)
@@ -992,12 +980,6 @@ public class VirtualServerResource {
 
 		log.severe("Key pair couldn't be created");
 		return false;
-	}
-
-	protected HPCloudManager createCloudManager(String id, String secret) 
-	{
-		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(id, secret));
-		return hpcManager;
 	}
 
 	public void sendNotificationEmail(KeyPair keyPair, String to, String firstName, String lastName, URI location)
@@ -1053,7 +1035,7 @@ public class VirtualServerResource {
 
 	protected boolean checkSecurityGroup(String groupName, String id, String secret, URI location, String locationId)
 	{
-		HPCloudManager hpcManager = createCloudManager(id, secret);
+		HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(id, secret));
 
 		return hpcManager.checkSecurityGroup(groupName, locationId);
 	}
@@ -1105,12 +1087,25 @@ public class VirtualServerResource {
 	
 	protected boolean makeSecurityGroup(String groupName, String id, String secret, URI location, String to, String firstName, String lastName, String locationId)
 	{
-		HPCloudManager hpcManager = createCloudManager(id, secret);
+		HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(id, secret));
 
 		SecurityGroup sg = hpcManager.createSecurityGroup(groupName, locationId);
 		sendSecurityGroupNotificationEmail(sg.getName(), to, firstName, lastName, location);
 
 		return true;
+	}
+	
+	protected HPCloudCredentials getHPCredentials(String identity, String secretKey)
+	{
+		try
+		{
+			HPCloudCredentials credentials = new HPCloudCredentials(identity, secretKey);
+			return credentials;
+		}
+		catch (Exception e)
+		{
+			throw new WebApplicationException();
+		}
 	}
 
 	private static class VirtualServerManager extends AbstractManager<VirtualServer> {

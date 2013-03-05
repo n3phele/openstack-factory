@@ -1,0 +1,81 @@
+<project name="openstack-factory test" basedir="." default="tests">
+
+  <property name="sdk.dir" location="/home/ubuntu/appengine-java-sdk-1.7.5" />
+  <property name="gwt.dir" location="/home/ubuntu/gwt-2.5.0" />
+  <import file="${sdk.dir}/config/user/ant-macros.xml" />
+ 
+  <target name="copyjars"
+      description="Copies the App Engine JARs to the WAR.">
+    <copy
+        todir="war/WEB-INF/lib"
+        flatten="true">
+      <fileset dir="${sdk.dir}/lib/user">
+        <include name="**/*.jar" />
+      </fileset>
+    </copy>
+  </target>
+
+  <path id="project.classpath">
+    <pathelement path="war/WEB-INF/classes" />
+    <fileset dir="war/WEB-INF/lib">
+      <include name="**/*.jar" />
+    </fileset>
+    <fileset dir="${sdk.dir}/lib">
+      <include name="shared/**/*.jar" />
+    </fileset>
+    <fileset dir="${gwt.dir}">
+      <include name="**/*.jar" />
+    </fileset>
+  </path>
+  
+   <path id="test.classpath">
+    <pathelement location="testClasses" />
+    <pathelement path="war/WEB-INF/classes" />
+   <fileset dir="war/WEB-INF/lib">
+      <include name="**/*.jar" />
+   </fileset>
+   <fileset dir="testlibs/">
+      <include name="**/*.jar" />
+   </fileset>
+  </path>
+
+  <target name="compile" depends="copyjars"
+      description="Compiles Java source and copies other source files to the WAR.">
+    <mkdir dir="war/WEB-INF/classes" />
+    <copy todir="war/WEB-INF/classes">
+      <fileset dir="src">
+        <exclude name="**/*.java" />
+      </fileset>
+    </copy>
+    <javac
+        srcdir="src"
+        destdir="war/WEB-INF/classes"
+        classpathref="project.classpath"
+        includeAntRuntime="true"
+        debug="on" />
+  </target>
+
+  <target name="compile_tests" depends="compile"
+      description="Compiles Java source tests.">
+    <mkdir dir="testClasses" />
+    <copy todir="testClasses">
+      <fileset dir="test">
+       <exclude name="**/*.java" />
+      </fileset>
+    </copy>
+    <javac
+      srcdir="test"
+      destdir="testClasses"
+      classpathref="test.classpath"
+      includeAntRuntime="true"
+      />
+  </target>
+  
+ <target name="tests" depends="compile_tests">
+    <junit fork="no" haltonfailure="yes">
+      <test name="n3phele.factory.test.AllUnitTests" />
+      <formatter type="plain" usefile="false" />
+      <classpath refid="test.classpath" />
+    </junit>    
+  </target>
+</project>
