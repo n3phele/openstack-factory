@@ -12,6 +12,7 @@ import javax.ws.rs.core.UriBuilder;
 
 import n3phele.factory.model.ServiceModelDao;
 import n3phele.factory.rest.impl.VirtualServerResource;
+import n3phele.service.core.NotFoundException;
 import n3phele.service.core.Resource;
 import n3phele.service.model.core.AbstractManager;
 import n3phele.service.model.core.BaseEntity;
@@ -191,10 +192,10 @@ public class VirtualServerResourceTest {
 		assertEquals(vs.getInstanceId(), virtualServer.getInstanceId());
 	}
 	
-	@Test
+	@Test(expected = NotFoundException.class)
 	public void virtualServerKillTest() {
 
-		VirtualServerManager manager = new VirtualServerManager();
+		final VirtualServerManager manager = new VirtualServerManager();
 				
 		//Add a virtual server object to database
 		VirtualServer vs = createFakeDataVirtualServer();
@@ -214,18 +215,20 @@ public class VirtualServerResourceTest {
 			@Override
 			protected void terminate(VirtualServer virtualServer)
 			{
-
+				manager.delete(virtualServer);
 			}
 			
-			//FIXME: How to verify if method was called?
 			@Override
 			protected void softKill(VirtualServer virtualServer, boolean error)
 			{
-				
+				manager.delete(virtualServer);
 			}
 		};
 		
 		resource.kill(vs.getId(), false, false);		
+		
+		//If virtual server was deleted, this method throws an exception
+		VirtualServer virtualServer = manager.get(vs.getId());
 	}
 
 	private VirtualServer createFakeDataVirtualServer() {
