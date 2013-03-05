@@ -95,7 +95,7 @@ public class BasicSecurityFilter implements ContainerRequestFilter {
         }
         return user;
     }
-    private boolean _isSecure() {
+    protected boolean _isSecure() {
     	return "https".equals(uriInfo.getRequestUri().getScheme());
     }
     public class Authorizer implements SecurityContext {

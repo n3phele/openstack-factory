@@ -585,7 +585,7 @@ public class VirtualServerResource {
 	 * @param sequence notification sequence number
 	 */
 
-	private void updateVirtualServer(VirtualServer item, UUID reference, int sequence) throws IllegalArgumentException
+	protected void updateVirtualServer(VirtualServer item, UUID reference, int sequence) throws IllegalArgumentException
 	{
 		HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(item.getAccessKey(), item.getEncryptedKey()));
 		String instanceId = item.getInstanceId();
@@ -959,14 +959,14 @@ public class VirtualServerResource {
 		}
 	}
 
-	private boolean checkKey(String key, String id, String secret, URI location, String locationId)
+	protected boolean checkKey(String key, String id, String secret, URI location, String locationId)
 	{
 		HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(id, secret));
 
 		return hpcManager.checkKeyPair(key, locationId);
 	}
 
-	private boolean createKey(String key, String id, String secret, URI location, String email, String firstName, String lastName, String locationId)
+	protected boolean createKey(String key, String id, String secret, URI location, String email, String firstName, String lastName, String locationId)
 	{
 		HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(id, secret));
 		KeyPair newKey = hpcManager.createKeyPair(key, locationId);
@@ -1033,7 +1033,7 @@ public class VirtualServerResource {
 		}
 	}
 
-	private boolean checkSecurityGroup(String groupName, String id, String secret, URI location, String locationId)
+	protected boolean checkSecurityGroup(String groupName, String id, String secret, URI location, String locationId)
 	{
 		HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(id, secret));
 
@@ -1085,7 +1085,7 @@ public class VirtualServerResource {
 
 	}
 	
-	private boolean makeSecurityGroup(String groupName, String id, String secret, URI location, String to, String firstName, String lastName, String locationId)
+	protected boolean makeSecurityGroup(String groupName, String id, String secret, URI location, String to, String firstName, String lastName, String locationId)
 	{
 		HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(id, secret));
 
@@ -1095,7 +1095,7 @@ public class VirtualServerResource {
 		return true;
 	}
 	
-	private HPCloudCredentials getHPCredentials(String identity, String secretKey)
+	protected HPCloudCredentials getHPCredentials(String identity, String secretKey)
 	{
 		try
 		{
