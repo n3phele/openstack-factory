@@ -6,6 +6,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import javax.ws.rs.core.UriBuilder;
 
@@ -23,6 +24,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import static org.mockito.Mockito.*;
 
 import com.google.appengine.tools.development.testing.LocalDatastoreServiceTestConfig;
 import com.google.appengine.tools.development.testing.LocalServiceTestHelper;
@@ -156,6 +159,73 @@ public class VirtualServerResourceTest {
 				
 		//Verify if returned the virtual server from database
 		assertEquals(1, collection.getElements().size());		
+	}
+	
+	@Test
+	public void virtualServerGetTest() {
+
+		VirtualServerManager manager = new VirtualServerManager();
+				
+		//Add a virtual server object to database
+		VirtualServer vs = createFakeDataVirtualServer();
+		long id = 1111l;
+		vs.setId(id);
+		manager.add(vs);
+		
+		//Test get method return from resource
+		VirtualServerResource resource = new VirtualServerResource() {
+			//Do nothing when trying to update reference throw remote call
+			@Override
+			protected void updateVirtualServer(VirtualServer item, UUID reference, int sequence) throws IllegalArgumentException
+			{
+				
+			}			
+		};		
+		VirtualServer virtualServer = resource.get(id);
+				
+		//Verify if returned the virtual server from database
+		assertEquals(vs.getId(), virtualServer.getId());	
+		assertEquals(vs.getLocation(), virtualServer.getLocation());
+		assertEquals(vs.getAccessKey(), virtualServer.getAccessKey());
+		assertEquals(vs.getEncryptedKey(), virtualServer.getEncryptedKey());
+		assertEquals(vs.getInstanceId(), virtualServer.getInstanceId());
+	}
+	
+	@Test
+	public void virtualServerKillTest() {
+
+		VirtualServerManager manager = new VirtualServerManager();
+				
+		//Add a virtual server object to database
+		VirtualServer vs = createFakeDataVirtualServer();
+		long id = 1111l;
+		vs.setId(id);
+		manager.add(vs);
+		
+		//Test get method return from resource
+		VirtualServerResource resource = new VirtualServerResource() {
+			//Do nothing when trying to update reference throw remote call
+			@Override
+			protected void updateVirtualServer(VirtualServer item, UUID reference, int sequence) throws IllegalArgumentException
+			{
+				
+			}
+			
+			@Override
+			protected void terminate(VirtualServer virtualServer)
+			{
+
+			}
+			
+			//FIXME: How to verify if method was called?
+			@Override
+			protected void softKill(VirtualServer virtualServer, boolean error)
+			{
+				
+			}
+		};
+		
+		resource.kill(vs.getId(), false, false);		
 	}
 
 	private VirtualServer createFakeDataVirtualServer() {

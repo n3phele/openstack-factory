@@ -597,7 +597,7 @@ public class VirtualServerResource {
 	 * @param sequence notification sequence number
 	 */
 
-	private void updateVirtualServer(VirtualServer item, UUID reference, int sequence) throws IllegalArgumentException
+	protected void updateVirtualServer(VirtualServer item, UUID reference, int sequence) throws IllegalArgumentException
 	{
 		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(item.getAccessKey(), item.getEncryptedKey()));
 		String instanceId = item.getInstanceId();
