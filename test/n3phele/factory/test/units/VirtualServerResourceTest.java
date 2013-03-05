@@ -4,8 +4,20 @@ import static org.junit.Assert.*;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
 
+import javax.ws.rs.core.UriBuilder;
+
+import n3phele.factory.model.ServiceModelDao;
 import n3phele.factory.rest.impl.VirtualServerResource;
+import n3phele.service.core.Resource;
+import n3phele.service.model.core.AbstractManager;
+import n3phele.service.model.core.BaseEntity;
+import n3phele.service.model.core.Collection;
+import n3phele.service.model.core.GenericModelDao;
+import n3phele.service.model.core.NameValue;
+import n3phele.service.model.core.VirtualServer;
 
 import org.junit.After;
 import org.junit.Before;
@@ -127,6 +139,51 @@ public class VirtualServerResourceTest {
 		
 		String result = resource.accountTest(true, "1", "secret", "key", uri, "locationId", "email", "firstName", "lastName", "securityGroup");
 		assertEquals("", result);
+	}
+	
+	@Test
+	public void virtualServerListTest() {
+
+		VirtualServerManager manager = new VirtualServerManager();
+				
+		//Add a virtual server object to database
+		VirtualServer vs = createFakeDataVirtualServer();
+		manager.add(vs);
+		
+		//Test list method return from resource
+		VirtualServerResource resource = new VirtualServerResource();		
+		Collection<BaseEntity> collection = resource.list(false);
+				
+		//Verify if returned the virtual server from database
+		assertEquals(1, collection.getElements().size());		
+	}
+
+	private VirtualServer createFakeDataVirtualServer() {
+		URI uri = null;
+		try {
+			uri = new URI("http://localhost/");
+		} catch (URISyntaxException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		VirtualServer vs = new VirtualServer("", "", uri, new ArrayList<NameValue>(), uri, "", "", "", "", uri, "");
+		return vs;
+	}
+	
+
+	public static class VirtualServerManager extends AbstractManager<VirtualServer> {
+
+		@Override
+		protected URI myPath()
+		{
+			return UriBuilder.fromUri(Resource.get("baseURI", "http://localhost:8889/resources")).path("virtualServer").build();
+		}
+
+		@Override
+		protected GenericModelDao<VirtualServer> itemDaoFactory(boolean transactional)
+		{
+			return new ServiceModelDao<VirtualServer>(VirtualServer.class, transactional);
+		}
 	}
 
 }
