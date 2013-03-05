@@ -3,7 +3,12 @@
  */
 package n3phele.factory.hpcloud;
 
+import java.io.UnsupportedEncodingException;
+import java.security.NoSuchAlgorithmException;
+
 import javax.xml.bind.annotation.XmlRootElement;
+
+import n3phele.security.EncryptedHPCredentials;
 
 
 @XmlRootElement
@@ -37,10 +42,11 @@ public class HPCloudCredentials {
 	 * @param identity A join of TenantName and AccessKey with a ":" between them.
 	 * @param secretKey secretKey associated with AccessKey provided in identity parameter.
 	 */
-	public HPCloudCredentials(String identity, String secretKey)
+	public HPCloudCredentials(String identity, String secretKey) throws Exception
 	{
-		this.identity = identity;
-		this.secretKey = secretKey;
+		EncryptedHPCredentials creds = new EncryptedHPCredentials(identity, secretKey);
+		this.identity = creds.getHPAccessKeyId();
+		this.secretKey = creds.getHPSecretKey();
 	}
 	
 	public HPCloudCredentials()

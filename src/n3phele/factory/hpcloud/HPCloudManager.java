@@ -317,6 +317,15 @@ public class HPCloudManager {
 		return sg;
 	}
 	
+	public int getKeyPairsCount(String zone)
+	{
+		KeyPairApi kpApi = mNovaApi.getKeyPairExtensionForZone(zone).get();
+		
+		FluentIterable<? extends KeyPair> kpList = kpApi.list();
+		
+		return kpList.size();
+	}
+	
 	public boolean checkKeyPair(String name, String zone)
 	{
 		KeyPairApi kpApi = mNovaApi.getKeyPairExtensionForZone(zone).get();

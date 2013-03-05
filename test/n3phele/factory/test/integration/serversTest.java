@@ -33,13 +33,4 @@ public class serversTest extends JerseyTest {
         String responseMsg = webResource.path("/servers").get(String.class);
         assertEquals("Hello World! Test!", responseMsg);
     }
-    
-    @Test
-    public void testCreateServer() {
-        WebResource webResource = resource();
-        HPCloudCredentials credentials = new HPCloudCredentials("", "");
-        ClientResponse clientResponse = webResource.path("/servers").type(MediaType.APPLICATION_JSON).accept(MediaType.APPLICATION_JSON).post(ClientResponse.class, credentials);
-        assertEquals(400, clientResponse.getStatus());
-    }
-
 }
