@@ -203,7 +203,6 @@ public class VirtualServerResourceTest {
 		vs.setId(id);
 		manager.add(vs);
 		
-		//Test get method return from resource
 		VirtualServerResource resource = new VirtualServerResource() {
 			//Do nothing when trying to update reference throw remote call
 			@Override
@@ -243,7 +242,7 @@ public class VirtualServerResourceTest {
 		return vs;
 	}
 	
-
+	//Helper that communicate with database for virtual server objects
 	public static class VirtualServerManager extends AbstractManager<VirtualServer> {
 
 		@Override
