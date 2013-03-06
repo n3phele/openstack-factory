@@ -3,9 +3,6 @@
  */
 package n3phele.factory.hpcloud;
 
-import java.io.UnsupportedEncodingException;
-import java.security.NoSuchAlgorithmException;
-
 import javax.xml.bind.annotation.XmlRootElement;
 
 import n3phele.security.EncryptedHPCredentials;

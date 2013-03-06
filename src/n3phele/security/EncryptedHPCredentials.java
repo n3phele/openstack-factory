@@ -41,7 +41,7 @@ public class EncryptedHPCredentials {
 	private String accessKey;
 	private String secretKey;
 
-	private String password = Resource.get("factorySecret", "");
+	private String password = "3hyebbehg56yeh5"; //Resource.get("factorySecret", "");
 
 	public EncryptedHPCredentials(String encryptedAccessKey, String encryptedSecretKey) throws UnsupportedEncodingException, NoSuchAlgorithmException {
 		this.accessKey = encryptedAccessKey;
