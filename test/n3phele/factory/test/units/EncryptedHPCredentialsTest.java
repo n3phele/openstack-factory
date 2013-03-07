@@ -39,16 +39,18 @@ public class EncryptedHPCredentialsTest {
 	@Test
 	public void decryptAccessKeyTest() throws UnsupportedEncodingException, NoSuchAlgorithmException
 	{
-		EncryptedHPCredentials creds = new EncryptedHPCredentials("aSRDm0DF+Xr/ABZXGQEF0Q==", "HxRKCsyKhzjNOuu9hDAtwQ==");
+		EncryptedHPCredentials creds = new EncryptedHPCredentials("Jerry1");
+		creds.setCredentials("d34nDRLp+Qhky99AJXH+Ww==", "d34nDRLp+Qhky99AJXH+Ww==");
 		
-		System.out.println(creds.getHPAccessKeyId());
+		assertEquals("Tom123456789", creds.getHPAccessKeyId());
 	}
 	
 	@Test
 	public void decryptSecretKeyTest() throws UnsupportedEncodingException, NoSuchAlgorithmException
 	{
-		EncryptedHPCredentials creds = new EncryptedHPCredentials("aSRDm0DF+Xr/ABZXGQEF0Q==", "HxRKCsyKhzjNOuu9hDAtwQ==");
+		EncryptedHPCredentials creds = new EncryptedHPCredentials("Jerry1");
+		creds.setCredentials("d34nDRLp+Qhky99AJXH+Ww==", "d34nDRLp+Qhky99AJXH+Ww==");
 		
-		System.out.println(creds.getHPSecretKey());
+		assertEquals("Tom123456789", creds.getHPSecretKey());
 	}
 }

@@ -30,20 +30,22 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.SecretKeySpec;
 
-import n3phele.service.core.Resource;
-
-//import com.amazonaws.auth.AWSCredentials;
 import com.sun.jersey.core.util.Base64;
+//import com.amazonaws.auth.AWSCredentials;
 
 public class EncryptedHPCredentials {
 	protected static Logger log = Logger.getLogger(EncryptedHPCredentials.class.getName());
 	
 	private String accessKey;
 	private String secretKey;
-
-	private String password = "3hyebbehg56yeh5"; //Resource.get("factorySecret", "");
-
-	public EncryptedHPCredentials(String encryptedAccessKey, String encryptedSecretKey) throws UnsupportedEncodingException, NoSuchAlgorithmException {
+	private String password;
+	
+	public EncryptedHPCredentials(String passwd)
+	{
+		this.password = passwd;
+	}
+	
+	public void setCredentials(String encryptedAccessKey, String encryptedSecretKey) throws UnsupportedEncodingException, NoSuchAlgorithmException {
 		this.accessKey = encryptedAccessKey;
 		this.secretKey = encryptedSecretKey;
 		decrypt(encryptedAccessKey, this.password);
