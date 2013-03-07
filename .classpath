@@ -41,6 +41,8 @@
 	<classpathentry kind="lib" path="war/WEB-INF/lib/rocoto-6.1.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jclouds-gae-1.5.7.jar"/>
 	<classpathentry kind="lib" path="testlibs/mockito-all-1.9.5.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/jersey-json-1.17.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/jettison-1.1.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jersey-bundle-1.17.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/asm-3.3.1.jar"/>
