@@ -12,5 +12,3 @@ Program Arguments: TenantName:AccessKey secretKey (This parameters is from your 
 VM Arguments: -Djclouds.trust-all-certs=true and -Djclouds.keystone.credential-type=apiAccessKeyCredentials
 
 
-.
-
