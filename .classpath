@@ -29,8 +29,6 @@
 	<classpathentry kind="lib" path="war/WEB-INF/lib/joda-time-2.1.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jsr250-api-1.0.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jsr311-api-1.1.1.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/logback-classic-1.0.0.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/logback-core-1.0.0.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/netty-3.3.1.Final.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/openstack-common-1.5.7.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/openstack-keystone-1.5.7.jar"/>
@@ -48,17 +46,19 @@
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jersey-atom-1.17.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/rome-1.0.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jdom-1.0.jar"/>
+	<classpathentry kind="lib" path="logback-classic-1.0.9.jar"/>
+	<classpathentry kind="lib" path="logback-core-1.0.9.jar"/>
+	<classpathentry kind="lib" path="testlibs/grizzly-framework-2.1.jar"/>
+	<classpathentry kind="lib" path="testlibs/grizzly-http-2.1.jar"/>
+	<classpathentry kind="lib" path="testlibs/grizzly-http-servlet-2.1.jar"/>
+	<classpathentry kind="lib" path="testlibs/grizzly-portunif-2.1.jar"/>
+	<classpathentry kind="lib" path="testlibs/grizzly-rcm-2.1.jar"/>
+	<classpathentry kind="lib" path="testlibs/grizzly-utils-2.0-b2.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jersey-bundle-1.17.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/asm-3.3.1.jar"/>
-	<classpathentry kind="con" path="com.google.appengine.eclipse.core.GAE_CONTAINER/v1"/>
-	<classpathentry kind="lib" path="testlibs/grizzly-framework-1.9.45.jar"/>
-	<classpathentry kind="lib" path="testlibs/grizzly-http-1.9.45.jar"/>
-	<classpathentry kind="lib" path="testlibs/grizzly-http-servlet-1.9.45.jar"/>
-	<classpathentry kind="lib" path="testlibs/grizzly-portunif-1.9.45.jar"/>
-	<classpathentry kind="lib" path="testlibs/grizzly-rcm-1.9.45.jar"/>
+	<classpathentry kind="con" path="com.google.appengine.eclipse.core.GAE_CONTAINER/App Engine"/>
 	<classpathentry kind="lib" path="testlibs/grizzly-servlet-webserver-1.9.45.jar"/>
-	<classpathentry kind="lib" path="testlibs/grizzly-utils-1.9.45.jar"/>
 	<classpathentry kind="lib" path="testlibs/jersey-test-framework-core-1.17.jar"/>
 	<classpathentry kind="lib" path="testlibs/jersey-test-framework-grizzly-1.17.jar"/>
 	<classpathentry kind="lib" path="testlibs/servlet-api-2.5.jar"/>
