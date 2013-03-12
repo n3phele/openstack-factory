@@ -250,7 +250,6 @@ public class HPCloudManager {
 	 */
 	public boolean checkSecurityGroup(String name, String zone)
 	{
-		SecurityGroup sg = null;
 		SecurityGroupApi sgApi = mNovaApi.getSecurityGroupExtensionForZone(zone).get();
 		String groupName;
 		
@@ -259,11 +258,14 @@ public class HPCloudManager {
 		else
 			groupName = name;
 		
-		sg = sgApi.get(groupName);
-		if(sg == null)
-			return false;
+		FluentIterable<? extends SecurityGroup> sgList = sgApi.list();
+		for (SecurityGroup sg : sgList)
+		{
+			if(sg.getName().equals(groupName))
+				return true;
+		}
 		
-		return true;		
+		return false;		
 	}
 
 	/**
