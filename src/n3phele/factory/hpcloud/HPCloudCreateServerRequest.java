@@ -10,7 +10,7 @@ public class HPCloudCreateServerRequest {
 	public String	hardwareId;
 	public String	imageId;
 	public String	locationId;
-	public String	keyPair;
+	public String	keyName;
 	public String	serverName;
 	public String	userData;
 
@@ -25,7 +25,7 @@ public class HPCloudCreateServerRequest {
 		this.imageId = imageId;
 		this.locationId = locationId;
 		this.securityGroup = securityGroup;
-		this.keyPair = keyPair;
+		this.keyName = keyPair;
 		this.nodeCount = nodeCount;
 	}
 

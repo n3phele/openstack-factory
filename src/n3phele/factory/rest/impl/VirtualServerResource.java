@@ -206,16 +206,9 @@ public class VirtualServerResource {
 	@Path("virtualServer")
 	public Response create(ExecutionFactoryCreateRequest r) throws Exception
 	{
-		int minCount = 1;
-		int maxCount = 1;
+		int nodeCount = 1;
 		HPCloudCreateServerRequest hpcRequest = new HPCloudCreateServerRequest();
 		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(r.accessKey, r.encryptedSecret));
-
-		// TODO: We doesn't need it anymore, correct?
-		/*if ("zombie".equalsIgnoreCase(r.name) || "debug".equalsIgnoreCase(r.name))
-		{
-			r.name = r.name.toUpperCase();
-		}*/
 
 		if (!r.name.startsWith("n3phele-"))
 		{
@@ -224,32 +217,15 @@ public class VirtualServerResource {
 
 		for (NameValue p : r.parameters)
 		{
-			if (p.getKey().equalsIgnoreCase("minCount"))
+			if (p.getKey().equalsIgnoreCase("nodeCount"))
 			{
 				String value = p.getValue();
 				try
 				{
-					minCount = Integer.valueOf(value);
-					if (minCount <= 0)
-						minCount = 1;
-				} catch (Exception e)
-				{
-
-				}
-			}
-
-			if (p.getKey().equalsIgnoreCase("maxCount"))
-			{
-				String value = p.getValue();
-				try
-				{
-					maxCount = Integer.valueOf(value);
-					if (maxCount <= 0)
-						maxCount = 1;
-				} catch (Exception e)
-				{
-
-				}
+					nodeCount = Integer.valueOf(value);
+					if (nodeCount <= 0)
+						nodeCount = 1;
+				} catch (Exception e){}
 			}
 
 			if (p.getKey().equalsIgnoreCase("imageId"))
@@ -262,7 +238,7 @@ public class VirtualServerResource {
 				hpcRequest.hardwareId = p.getValue();
 			}
 
-			if (p.getKey().equalsIgnoreCase("securityGroups"))
+			if (p.getKey().equalsIgnoreCase("securityGroup"))
 			{
 				hpcRequest.securityGroup = p.getValue();
 			}
@@ -276,22 +252,15 @@ public class VirtualServerResource {
 			{
 				hpcRequest.locationId = p.getValue();
 			}
+			
+			if (p.getKey().equalsIgnoreCase("keyName"))
+			{
+				hpcRequest.keyName = p.getValue();
+			}
 		}
 
-		if (minCount > maxCount)
-		{
-			maxCount = minCount;
-		}
-
-		hpcRequest.nodeCount = maxCount;
-		hpcRequest.keyPair = r.name;
+		hpcRequest.nodeCount = nodeCount;
 		hpcRequest.serverName = r.name;
-
-		// FIXME: Server names must be unique, maybe set this as a metadata?
-		/*
-		 * if("zombie".equalsIgnoreCase(r.name) ||
-		 * "debug".equalsIgnoreCase(r.name)) { r.name = r.name.toUpperCase(); }
-		 */
 
 		List<ServerCreated> resultList = hpcManager.createServerRequest(hpcRequest);
 		List<URI> uriList = new ArrayList<URI>(resultList.size());
@@ -1196,11 +1165,10 @@ public class VirtualServerResource {
 		new TypedParameter("instanceType", "specifies virtual machine size. Valid Values: t1.micro | m1.small | m1.large | m1.xlarge | m2.xlarge | m2.2xlarge | m2.4xlarge | c1.medium | c1.xlarge", ParameterType.String, "", ""),
 		new TypedParameter("imageId", "Unique ID of a machine image, returned by a call to RegisterImage", ParameterType.String, "", ""),
 		new TypedParameter("keyName", "Name of the SSH key to be used for communication with the VM", ParameterType.String, "", ""),
-		new TypedParameter("minCount", "Minimum number of instances to launch. If the value is more than Amazon EC2 can launch, no instances are launched at all.", ParameterType.Long, "", "1"),
-		new TypedParameter("maxCount", "Maximum number of instances to launch. If the value is more than Amazon EC2 can launch, the largest possible number above minCount will be launched instead.", ParameterType.Long, "", "1"),
+		new TypedParameter("nodeCount", "Number of instances to launch.", ParameterType.Long, "", "1"),
 		new TypedParameter("locationId", "Unique ID of hpcloud zone. Valid Values: az-1.region-a.geo-1 | az-2.region-a.geo-1 | az-3.region-a.geo-1", ParameterType.String, "", ""),
 		new TypedParameter("monitoring", "Specifies whether monitoring is enabled for the instance.", ParameterType.Boolean, "", "false"),
-		new TypedParameter("securityGroups", "Name of the security group which controls the open TCP/IP ports for the VM.", ParameterType.String, "", ""),
+		new TypedParameter("securityGroup", "Name of the security group which controls the open TCP/IP ports for the VM.", ParameterType.String, "", ""),
 		new TypedParameter("userData", "Base64-encoded MIME user data made available to the instance(s). May be used to pass startup commands.", ParameterType.String, "value", "default")
 	};
 	

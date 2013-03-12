@@ -202,7 +202,7 @@ public class HPCloudManager {
 		/**
 		 * Create our keypair. Return existent keypair if already exists.
 		 */
-		KeyPair keyPair = createKeyPair(r.keyPair, r.locationId);
+		KeyPair keyPair = createKeyPair(r.keyName, r.locationId);
 		
 		/**
 		 * Build our server creation options.
