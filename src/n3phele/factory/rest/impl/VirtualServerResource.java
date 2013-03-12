@@ -209,12 +209,7 @@ public class VirtualServerResource {
 		int nodeCount = 1;
 		HPCloudCreateServerRequest hpcRequest = new HPCloudCreateServerRequest();
 		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(r.accessKey, r.encryptedSecret));
-
-		if (!r.name.startsWith("n3phele-"))
-		{
-			r.name = "n3phele-" + r.name;
-		}
-
+		
 		for (NameValue p : r.parameters)
 		{
 			if (p.getKey().equalsIgnoreCase("nodeCount"))
@@ -272,6 +267,7 @@ public class VirtualServerResource {
 		{
 			VirtualServer item = new VirtualServer(srv.getName(), r.description, r.location, r.parameters, r.notification, r.accessKey, r.encryptedSecret, r.owner, r.idempotencyKey);
 			item.setCreated(epoch);
+			item.setInstanceId(srv.getId());
 			add(item);
 			vsList.add(item);
 		}
@@ -287,8 +283,7 @@ public class VirtualServerResource {
 			s.setSiblings(siblings);
 			update(s);
 		}
-
-		return Response.created(uriList.get(0)).entity(new HPCloudCreateServerResponse(uriList)).build();
+		return Response.created(uriList.get(0)).entity(new HPCloudCreateServerResponse(uriList,hpcRequest.hardwareId,hpcRequest.imageId,hpcRequest.keyName,uriList.get(0).toString(),hpcRequest.locationId,vsList.get(0).getInstanceId())).build();
 	}
 
 	/** Get details of a specific virtual server. This operation does a deep get, getting information from the cloud before
@@ -585,6 +580,7 @@ public class VirtualServerResource {
 				 * If the statuses are different, and the current cloud status
 				 * is ACTIVE (Running), we should update.
 				 */
+				//FIXME: update output parameters
 				if (!item.getStatus().equalsIgnoreCase(currentStatus.toString()) && currentStatus.compareTo(Status.ACTIVE) == 0)  //TODO: Verify if we're using correct status
 				{
 					Map<String, String> tags = new HashMap<String, String>();
@@ -1157,51 +1153,28 @@ public class VirtualServerResource {
 	 * TODO: Review our input and output parameters
 	 */
 	public final static TypedParameter inputParameters[] =  {
-		new TypedParameter("availabilityZone", "Specifies the placement constraints (Availability Zones) for launching the instances.", ParameterType.String, "", ""),
-		new TypedParameter("groupName", "Specifies the name of a placement group. Cannot be used for spot instances", ParameterType.String, "", ""),
-		new TypedParameter("availabilityZoneGroup", "If you specify the same Availability Zone group for all Spot Instance requests, all Spot Instances are launched in the same Availability Zone.", ParameterType.String, "", ""),
-		new TypedParameter("launchGroup", "The instance launch group. Launch groups are Spot Instances that launch together and terminate together", ParameterType.String, "", ""),
-		new TypedParameter("instanceInitiatedShutdownBehavior", "If an instance shutdown is initiated, this determines whether the instance stops or terminates. Valid Values: stop | terminate", ParameterType.String, "", ""),
 		new TypedParameter("instanceType", "specifies virtual machine size. Valid Values: t1.micro | m1.small | m1.large | m1.xlarge | m2.xlarge | m2.2xlarge | m2.4xlarge | c1.medium | c1.xlarge", ParameterType.String, "", ""),
 		new TypedParameter("imageId", "Unique ID of a machine image, returned by a call to RegisterImage", ParameterType.String, "", ""),
 		new TypedParameter("keyName", "Name of the SSH key to be used for communication with the VM", ParameterType.String, "", ""),
 		new TypedParameter("nodeCount", "Number of instances to launch.", ParameterType.Long, "", "1"),
 		new TypedParameter("locationId", "Unique ID of hpcloud zone. Valid Values: az-1.region-a.geo-1 | az-2.region-a.geo-1 | az-3.region-a.geo-1", ParameterType.String, "", ""),
-		new TypedParameter("monitoring", "Specifies whether monitoring is enabled for the instance.", ParameterType.Boolean, "", "false"),
 		new TypedParameter("securityGroup", "Name of the security group which controls the open TCP/IP ports for the VM.", ParameterType.String, "", ""),
 		new TypedParameter("userData", "Base64-encoded MIME user data made available to the instance(s). May be used to pass startup commands.", ParameterType.String, "value", "default")
 	};
 	
-	public final static TypedParameter outputParameters[] =  {
-		new TypedParameter("amiLaunchIndex", "The AMI launch index, which can be used to find this instance within the launch group.", ParameterType.String, "", ""),
-		new TypedParameter("architecture", "The architecture of the image.", ParameterType.String, "", ""),
-		new TypedParameter("dnsName", "The public DNS name assigned to the instance. This DNS name is contactable from outside the Amazon EC2 network. This element remains empty until the instance enters a running state. ", ParameterType.String, "", ""),
-		new TypedParameter("imageId", "Specifies the name of a placement group.", ParameterType.String, "", ""),
-		new TypedParameter("instanceInitiatedShutdownBehavior", "If an instance shutdown is initiated, this determines whether the instance stops or terminates. Valid Values: stop | terminate", ParameterType.String, "", ""),
-		new TypedParameter("instanceType", "specifies virtual machine size. Valid Values: t1.micro | m1.small | m1.large | m1.xlarge | m2.xlarge | m2.2xlarge | m2.4xlarge | c1.medium | c1.xlarge", ParameterType.Long, "", ""),
-		new TypedParameter("imageId", "Image ID of the AMI used to launch the instance.", ParameterType.String, "", ""),
-		new TypedParameter("instanceId", "Unique ID of the instance launched.", ParameterType.String, "", ""),
-		new TypedParameter("instanceLifecycle", "Specifies whether this is a Spot Instance.", ParameterType.String, "", ""),
-		new TypedParameter("instanceState", "State of the instance. code: A 16-bit unsigned integer. The high byte is an opaque internal value and should be ignored. The low byte is set based on the state represented. Valid Values: 0 (pending) | 16 (running) | 32 (shutting-down) | 48 (terminated) | 64 (stopping) | 80 (stopped). name: Valid Values: pending | running | shutting-down | terminated | stopping | stopped ", ParameterType.String, "", ""),
+	public final static TypedParameter outputParameters[] =  {		
 		new TypedParameter("instanceType", "specifies virtual machine size. Valid Values: t1.micro | m1.small | m1.large | m1.xlarge | m2.xlarge | m2.2xlarge | m2.4xlarge | c1.medium | c1.xlarge", ParameterType.String, "", ""),
-		new TypedParameter("publicIpAddress", "Specifies the public IP address of the instance.", ParameterType.String, "", ""),
-		new TypedParameter("kernelId", "Kernel associated with this instance.", ParameterType.String, "", ""),
+		new TypedParameter("imageId", "Unique ID of a machine image, returned by a call to RegisterImage", ParameterType.String, "", ""),
 		new TypedParameter("keyName", "Name of the SSH key to be used for communication with the VM", ParameterType.String, "", ""),
-		new TypedParameter("launchTime", "The time the instance launched", ParameterType.String, "", ""),
-		new TypedParameter("monitoring", "Specifies whether monitoring is enabled for the instance. state: true | false", ParameterType.String, "", ""),
-		new TypedParameter("placement", "The location where the instance launched. availabilityZone: Availability Zone of the instance", ParameterType.String, "", ""),
-		new TypedParameter("platform", "The Platform of the instance (e.g., Windows).", ParameterType.String, "", ""),
-		new TypedParameter("privateDnsName", "The private DNS name assigned to the instance. This DNS name can only be used inside the Amazon EC2 network. This element remains empty until the instance enters a running state.", ParameterType.String, "", ""),
+		new TypedParameter("location", "URI of the virtual server created.", ParameterType.String, "", ""),
+		new TypedParameter("locationId", "Unique ID of hpcloud zone. Valid Values: az-1.region-a.geo-1 | az-2.region-a.geo-1 | az-3.region-a.geo-1", ParameterType.String, "", ""),
+		new TypedParameter("instanceId", "Unique ID of the instance launched.", ParameterType.String, "", ""),
+		
+		
+	
+		new TypedParameter("instanceState", "State of the instance. code: A 16-bit unsigned integer. The high byte is an opaque internal value and should be ignored. The low byte is set based on the state represented. Valid Values: 0 (pending) | 16 (running) | 32 (shutting-down) | 48 (terminated) | 64 (stopping) | 80 (stopped). name: Valid Values: pending | running | shutting-down | terminated | stopping | stopped ", ParameterType.String, "", ""),
+		new TypedParameter("publicIpAddress", "Specifies the public IP address of the instance.", ParameterType.String, "", ""),
 		new TypedParameter("privateIpAddress", "Specifies the private IP address that is assigned to the instance.", ParameterType.String, "", ""),
-		new TypedParameter("productCodes", "Product codes attached to this instance.", ParameterType.String, "", ""),
-		new TypedParameter("ramdiskId", "RAM disk associated with this instance.", ParameterType.String, "", ""),
-		new TypedParameter("reason", "Reason for the most recent state transition. This might be an empty string.", ParameterType.String, "", ""),
-		new TypedParameter("rootDeviceName", "The root device name (e.g., /dev/sda1).", ParameterType.String, "", ""),
-		new TypedParameter("rootDeviceType", "The root device type used by the AMI. The AMI can use an Amazon EBS or instance store root device.", ParameterType.String, "", ""),
-		new TypedParameter("spotInstanceRequestId", "The ID of the Spot Instance request.", ParameterType.String, "", ""),
-		new TypedParameter("stateReason", "The reason for the state change. code: Reason code for the state change message: Message for the state change", ParameterType.String, "", ""),
-		new TypedParameter("subnetId", "Specifies the Amazon VPC subnet ID in which the instance is running.", ParameterType.String, "", ""),
-		new TypedParameter("virtualizationType", "Specifies the instance's virtualization type (paravirtual or hvm).", ParameterType.String, "", ""),
-		new TypedParameter("vpcId", "Specifies the Amazon VPC in which the instance is running.", ParameterType.String, "", "")
+		new TypedParameter("launchTime", "The time the instance launched", ParameterType.String, "", "")
 	};
 }
