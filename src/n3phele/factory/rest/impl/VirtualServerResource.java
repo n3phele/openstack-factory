@@ -283,7 +283,7 @@ public class VirtualServerResource {
 			s.setSiblings(siblings);
 			update(s);
 		}
-		return Response.created(uriList.get(0)).entity(new HPCloudCreateServerResponse(uriList,hpcRequest.hardwareId,hpcRequest.imageId,hpcRequest.keyName,uriList.get(0).toString(),hpcRequest.locationId,vsList.get(0).getInstanceId())).build();
+		return Response.created(uriList.get(0)).entity(new HPCloudCreateServerResponse(uriList)).build();
 	}
 
 	/** Get details of a specific virtual server. This operation does a deep get, getting information from the cloud before
@@ -580,14 +580,13 @@ public class VirtualServerResource {
 				 * If the statuses are different, and the current cloud status
 				 * is ACTIVE (Running), we should update.
 				 */
-				//FIXME: update output parameters
 				if (!item.getStatus().equalsIgnoreCase(currentStatus.toString()) && currentStatus.compareTo(Status.ACTIVE) == 0)  //TODO: Verify if we're using correct status
 				{
 					Map<String, String> tags = new HashMap<String, String>();
 					tags.put("n3phele-name", item.getName());
 					tags.put("n3phele-factory", Resource.get("factoryName", FACTORY_NAME));
 					tags.put("n3phele-uri", item.getUri().toString());
-
+					item.setOutputParameters(Extractor.extract(s));
 					hpcManager.putServerTags(item.getInstanceId(), locationId, tags);
 				}
 
@@ -1163,18 +1162,27 @@ public class VirtualServerResource {
 	};
 	
 	public final static TypedParameter outputParameters[] =  {		
-		new TypedParameter("instanceType", "specifies virtual machine size. Valid Values: t1.micro | m1.small | m1.large | m1.xlarge | m2.xlarge | m2.2xlarge | m2.4xlarge | c1.medium | c1.xlarge", ParameterType.String, "", ""),
-		new TypedParameter("imageId", "Unique ID of a machine image, returned by a call to RegisterImage", ParameterType.String, "", ""),
-		new TypedParameter("keyName", "Name of the SSH key to be used for communication with the VM", ParameterType.String, "", ""),
-		new TypedParameter("location", "URI of the virtual server created.", ParameterType.String, "", ""),
-		new TypedParameter("locationId", "Unique ID of hpcloud zone. Valid Values: az-1.region-a.geo-1 | az-2.region-a.geo-1 | az-3.region-a.geo-1", ParameterType.String, "", ""),
-		new TypedParameter("instanceId", "Unique ID of the instance launched.", ParameterType.String, "", ""),
-		
-		
-	
-		new TypedParameter("instanceState", "State of the instance. code: A 16-bit unsigned integer. The high byte is an opaque internal value and should be ignored. The low byte is set based on the state represented. Valid Values: 0 (pending) | 16 (running) | 32 (shutting-down) | 48 (terminated) | 64 (stopping) | 80 (stopped). name: Valid Values: pending | running | shutting-down | terminated | stopping | stopped ", ParameterType.String, "", ""),
-		new TypedParameter("publicIpAddress", "Specifies the public IP address of the instance.", ParameterType.String, "", ""),
-		new TypedParameter("privateIpAddress", "Specifies the private IP address that is assigned to the instance.", ParameterType.String, "", ""),
-		new TypedParameter("launchTime", "The time the instance launched", ParameterType.String, "", "")
+		new TypedParameter("AccessIPv4", "IPv4 public server address", ParameterType.String, "", ""),
+		new TypedParameter("AccessIPv6", "IPv6 public server address", ParameterType.String, "", ""),
+		//new TypedParameter("Addresses", "The ip addresses assigned to the server", ParameterType.List, "", ""),
+		new TypedParameter("Class", "Class of the server object", ParameterType.String, "", ""),
+		new TypedParameter("ConfigDrive", "Drive configuration of the server", ParameterType.String, "", ""),
+		new TypedParameter("Created", "Date when the server was created", ParameterType.String, "", ""),
+		new TypedParameter("DiskConfig", "Disk config attribute from the Disk Config Extension (alias OS-DCF)", ParameterType.String, "", ""),
+		new TypedParameter("ExtendedAttributes", "Extended server attributes fields (alias OS-EXT-SRV-ATTR)", ParameterType.String, "", ""),
+		new TypedParameter("ExtendedStatus", "Extended server status fields (alias OS-EXT-STS)", ParameterType.String, "", ""),
+		new TypedParameter("Flavor", "Instance type of the server", ParameterType.String, "", ""),
+		new TypedParameter("HostId", "Host identifier, or null if in Server.Status.BUILD", ParameterType.String, "", ""),
+		new TypedParameter("Id", "Id of the server", ParameterType.String, "", ""),
+		new TypedParameter("Image", "Image of the server", ParameterType.String, "", ""),
+		new TypedParameter("KeyName", "KeyName if extension is present and there is a value for this server", ParameterType.String, "", ""),
+		new TypedParameter("Links", "The links of the id address allocated to the new server", ParameterType.List, "", ""),
+		//new TypedParameter("Metadata", "Map of Name/Value pairs", ParameterType.String, "", ""),
+		new TypedParameter("Name", "Name of the server", ParameterType.String, "", ""),
+		new TypedParameter("Status", "Indication of the current server state. Possible values: ACTIVE, BUILD, REBUILD, SUSPENDED, RESIZE, VERIFY_RESIZE, REVERT_RESIZE, PASSWORD, REBOOT, HARD_REBOOT, DELETED, UNKNOWN, and ERROR.", ParameterType.String, "", ""),
+		new TypedParameter("TenantId", "Group id of the server", ParameterType.String, "", ""),
+		new TypedParameter("Updated", "When the server was last updated", ParameterType.String, "", ""),
+		new TypedParameter("UserId", "User id of the server", ParameterType.String, "", ""),
+		new TypedParameter("UuId", "Unique server id", ParameterType.String, "", "")
 	};
 }
