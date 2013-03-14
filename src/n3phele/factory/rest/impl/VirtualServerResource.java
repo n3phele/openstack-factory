@@ -70,6 +70,7 @@ import n3phele.service.model.core.ParameterType;
 import n3phele.service.model.core.TypedParameter;
 import n3phele.service.model.core.VirtualServer;
 
+import org.jclouds.openstack.nova.v2_0.domain.Address;
 import org.jclouds.openstack.nova.v2_0.domain.KeyPair;
 import org.jclouds.openstack.nova.v2_0.domain.RebootType;
 import org.jclouds.openstack.nova.v2_0.domain.SecurityGroup;
@@ -79,9 +80,11 @@ import org.jclouds.openstack.nova.v2_0.domain.ServerCreated;
 
 import com.google.apphosting.api.DeadlineExceededException;
 import com.googlecode.objectify.Key;
+import com.google.common.collect.Multimap;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
+
 
 /** EC2 Virtual Server Resource manages the lifecycle of virtual machines on Amazon EC2 (or compatible) clouds.
  * @author Nigel Cook
@@ -269,7 +272,7 @@ public class VirtualServerResource {
 			item.setCreated(epoch);
 			item.setInstanceId(srv.getId());
 			add(item);
-			vsList.add(item);
+			vsList.add(item);			
 		}
 		
 		for(VirtualServer s : vsList)
@@ -587,6 +590,7 @@ public class VirtualServerResource {
 					tags.put("n3phele-factory", Resource.get("factoryName", FACTORY_NAME));
 					tags.put("n3phele-uri", item.getUri().toString());
 					item.setOutputParameters(Extractor.extract(s));
+					s.getExtendedAttributes();
 					hpcManager.putServerTags(item.getInstanceId(), locationId, tags);
 				}
 
@@ -1147,37 +1151,33 @@ public class VirtualServerResource {
 	
 	public List<VirtualServer> getZombie() { return manager.itemDao().ofy().query(VirtualServer.class).filter("name", "zombie").list(); }
 
-	/*
-	 * Factory parameters
-	 * TODO: Review our input and output parameters
-	 */
 	public final static TypedParameter inputParameters[] =  {
-		new TypedParameter("instanceType", "specifies virtual machine size. Valid Values: t1.micro | m1.small | m1.large | m1.xlarge | m2.xlarge | m2.2xlarge | m2.4xlarge | c1.medium | c1.xlarge", ParameterType.String, "", ""),
-		new TypedParameter("imageId", "Unique ID of a machine image, returned by a call to RegisterImage", ParameterType.String, "", ""),
-		new TypedParameter("keyName", "Name of the SSH key to be used for communication with the VM", ParameterType.String, "", ""),
+		new TypedParameter("instanceType", "Specifies the virtual machine size. Valid Values: 100 (standard.xsmall), 101 (standard.small), 102 (standard.medium), 103 (standard.large), 104 (standard.xlarge), 105 (standard.2xlarge)", ParameterType.String,"", "100"),
+		new TypedParameter("imageId", "Unique ID of a machine image, returned by a call to RegisterImage", ParameterType.String, "", "75845"),
+		new TypedParameter("keyName", "Name of the SSH key  to be used for communication with the VM", ParameterType.String, "", "hpdefault"),
 		new TypedParameter("nodeCount", "Number of instances to launch.", ParameterType.Long, "", "1"),
-		new TypedParameter("locationId", "Unique ID of hpcloud zone. Valid Values: az-1.region-a.geo-1 | az-2.region-a.geo-1 | az-3.region-a.geo-1", ParameterType.String, "", ""),
-		new TypedParameter("securityGroup", "Name of the security group which controls the open TCP/IP ports for the VM.", ParameterType.String, "", ""),
-		new TypedParameter("userData", "Base64-encoded MIME user data made available to the instance(s). May be used to pass startup commands.", ParameterType.String, "value", "default")
+		new TypedParameter("locationId", "Unique ID of hpcloud zone. Valid Values: az-1.region-a.geo-1 | az-2.region-a.geo-1 | az-3.region-a.geo-1", ParameterType.String, "", "az-1.region-a.geo-1"),
+		new TypedParameter("securityGroup", "Name of the security group which controls the open TCP/IP ports for the VM.", ParameterType.String, "", "default"),
+		new TypedParameter("userData", "Base64-encoded MIME user data made available to the instance(s). May be used to pass startup commands.", ParameterType.String, "value", "#!/bin/bash\necho n3phele agent injection... \nset -x\n wget -q -O - https://n3phele-agent.s3.amazonaws.com/n3ph-install-tgz-basic | su - -c '/bin/bash -s ec2-user ~/agent ~/sandbox' ec2-user\n")
 	};
 	
 	public final static TypedParameter outputParameters[] =  {		
 		new TypedParameter("AccessIPv4", "IPv4 public server address", ParameterType.String, "", ""),
 		new TypedParameter("AccessIPv6", "IPv6 public server address", ParameterType.String, "", ""),
-		//new TypedParameter("Addresses", "The ip addresses assigned to the server", ParameterType.List, "", ""),
+		new TypedParameter("PrivateIPAddresses", "The private ip addresses assigned to the server", ParameterType.List, "", ""),
+		new TypedParameter("PublicIPAddresses", "The public ip addresses assigned to the server", ParameterType.List, "", ""),
 		new TypedParameter("Class", "Class of the server object", ParameterType.String, "", ""),
 		new TypedParameter("ConfigDrive", "Drive configuration of the server", ParameterType.String, "", ""),
 		new TypedParameter("Created", "Date when the server was created", ParameterType.String, "", ""),
 		new TypedParameter("DiskConfig", "Disk config attribute from the Disk Config Extension (alias OS-DCF)", ParameterType.String, "", ""),
 		new TypedParameter("ExtendedAttributes", "Extended server attributes fields (alias OS-EXT-SRV-ATTR)", ParameterType.String, "", ""),
 		new TypedParameter("ExtendedStatus", "Extended server status fields (alias OS-EXT-STS)", ParameterType.String, "", ""),
-		new TypedParameter("Flavor", "Instance type of the server", ParameterType.String, "", ""),
+		new TypedParameter("Flavor", "Standard Instance type of the server", ParameterType.String, "", ""),
 		new TypedParameter("HostId", "Host identifier, or null if in Server.Status.BUILD", ParameterType.String, "", ""),
 		new TypedParameter("Id", "Id of the server", ParameterType.String, "", ""),
 		new TypedParameter("Image", "Image of the server", ParameterType.String, "", ""),
 		new TypedParameter("KeyName", "KeyName if extension is present and there is a value for this server", ParameterType.String, "", ""),
 		new TypedParameter("Links", "The links of the id address allocated to the new server", ParameterType.List, "", ""),
-		//new TypedParameter("Metadata", "Map of Name/Value pairs", ParameterType.String, "", ""),
 		new TypedParameter("Name", "Name of the server", ParameterType.String, "", ""),
 		new TypedParameter("Status", "Indication of the current server state. Possible values: ACTIVE, BUILD, REBUILD, SUSPENDED, RESIZE, VERIFY_RESIZE, REVERT_RESIZE, PASSWORD, REBOOT, HARD_REBOOT, DELETED, UNKNOWN, and ERROR.", ParameterType.String, "", ""),
 		new TypedParameter("TenantId", "Group id of the server", ParameterType.String, "", ""),
