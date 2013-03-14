@@ -1186,7 +1186,7 @@ public class VirtualServerResource {
 		new TypedParameter("UuId", "Unique server id", ParameterType.String, "", ""),
 		new TypedParameter("PowerState", "Server power state", ParameterType.Long, "", ""),
 		new TypedParameter("TaskState", "State of the task on server", ParameterType.String, "", ""),
-		new TypedParameter("VMState", "State of the virtual machine", ParameterType.String, "", ""),
+		new TypedParameter("VmState", "State of the virtual machine", ParameterType.String, "", ""),
 		new TypedParameter("InstanceName", "Server instance name", ParameterType.String, "", ""),
 		new TypedParameter("HostName", "Server host name", ParameterType.String, "", ""),
 		new TypedParameter("HypervisorHostName", "Server hypervisor host name", ParameterType.String, "", "")

@@ -30,6 +30,7 @@ import org.jclouds.openstack.nova.v2_0.domain.Server;
 import org.jclouds.openstack.nova.v2_0.domain.ServerExtendedAttributes;
 import org.jclouds.openstack.nova.v2_0.domain.ServerExtendedStatus;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.Multimap;
 
 /** Introspects an object extracting name/value pairs.
@@ -74,7 +75,7 @@ public class HPCloudExtractor {
 						}
 					}
 					//Retrieve info from ServerExtendedStatus object
-					else if((field.compareTo("ServerExtendedStatus")==0)){
+					else if((field.compareTo("ExtendedStatus")==0)){
 						Class<?> args[] = method.getParameterTypes();
 						if(args.length == 0) {
 							Class<?> target = ServerExtendedStatus.class;
@@ -86,10 +87,10 @@ public class HPCloudExtractor {
 									String vmState = getVMState(response);
 									result.add(new NameValue("PowerState", powerState.toString()));
 									result.add(new NameValue("TaskState", taskState));
-									result.add(new NameValue("VMState", vmState));
+									result.add(new NameValue("VmState", vmState));
 									log.info("Added field PowerState of type "+ServerExtendedStatus.class+" with value "+powerState.toString());
 									log.info("Added field TaskState of type "+ServerExtendedStatus.class+" with value "+taskState);
-									log.info("Added field VMState of type "+ServerExtendedStatus.class+" with value "+vmState);
+									log.info("Added field VmState of type "+ServerExtendedStatus.class+" with value "+vmState);
 								}
 							} catch(Exception e) {
 								log.log(Level.WARNING,method.getName()+" with return "+target.getCanonicalName(), e);
@@ -97,7 +98,7 @@ public class HPCloudExtractor {
 						}						
 					}
 					//Retrieve info from ServerExtendedAttributes object
-					else if((field.compareTo("ServerExtendedAttributes")==0)){
+					else if((field.compareTo("ExtendedAttributes")==0)){
 						Class<?> args[] = method.getParameterTypes();
 						if(args.length == 0) {
 							Class<?> target = ServerExtendedAttributes.class;
@@ -186,38 +187,44 @@ public class HPCloudExtractor {
 	}
 	
 	private static Long getPowerState(Object response){
-		ServerExtendedStatus status = (ServerExtendedStatus)response;
+		Optional<ServerExtendedStatus> st = (Optional<ServerExtendedStatus>)response;
+		ServerExtendedStatus status = st.get();
 		int powerState = status.getPowerState();
 		Long ret = new Long(powerState);
 		return ret;
 	}
 	
 	private static String getTaskState(Object response){
-		ServerExtendedStatus status = (ServerExtendedStatus)response;
+		Optional<ServerExtendedStatus> st = (Optional<ServerExtendedStatus>)response;
+		ServerExtendedStatus status = st.get();
 		
 		return status.getTaskState();
 	}
 	
 	private static String getVMState(Object response){
-		ServerExtendedStatus status = (ServerExtendedStatus)response;
+		Optional<ServerExtendedStatus> st = (Optional<ServerExtendedStatus>)response;
+		ServerExtendedStatus status = st.get();
 		
 		return status.getVmState();
 	}
 	
 	private static String getInstanceName(Object response){
-		ServerExtendedAttributes attributes = (ServerExtendedAttributes) response;
+		Optional<ServerExtendedAttributes> sat = (Optional<ServerExtendedAttributes>)response;
+		ServerExtendedAttributes attributes = sat.get();
 		
 		return attributes.getInstanceName();
 	}
 	
 	private static String getHostName(Object response){
-		ServerExtendedAttributes attributes = (ServerExtendedAttributes) response;
+		Optional<ServerExtendedAttributes> sat = (Optional<ServerExtendedAttributes>)response;
+		ServerExtendedAttributes attributes = sat.get();
 		
 		return attributes.getHostName();
 	}
 	
 	private static String getHypervisorHostName(Object response){
-		ServerExtendedAttributes attributes = (ServerExtendedAttributes) response;
+		Optional<ServerExtendedAttributes> sat = (Optional<ServerExtendedAttributes>)response;
+		ServerExtendedAttributes attributes = sat.get();
 		
 		return attributes.getHypervisorHostName();
 	}
