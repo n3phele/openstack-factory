@@ -589,8 +589,8 @@ public class VirtualServerResource {
 					tags.put("n3phele-name", item.getName());
 					tags.put("n3phele-factory", Resource.get("factoryName", FACTORY_NAME));
 					tags.put("n3phele-uri", item.getUri().toString());
-					item.setOutputParameters(Extractor.extract(s));
 					s.getExtendedAttributes();
+					item.setOutputParameters(HPCloudExtractor.extract(s));					
 					hpcManager.putServerTags(item.getInstanceId(), locationId, tags);
 				}
 
@@ -1183,6 +1183,12 @@ public class VirtualServerResource {
 		new TypedParameter("TenantId", "Group id of the server", ParameterType.String, "", ""),
 		new TypedParameter("Updated", "When the server was last updated", ParameterType.String, "", ""),
 		new TypedParameter("UserId", "User id of the server", ParameterType.String, "", ""),
-		new TypedParameter("UuId", "Unique server id", ParameterType.String, "", "")
+		new TypedParameter("UuId", "Unique server id", ParameterType.String, "", ""),
+		new TypedParameter("PowerState", "Server power state", ParameterType.Long, "", ""),
+		new TypedParameter("TaskState", "State of the task on server", ParameterType.String, "", ""),
+		new TypedParameter("VMState", "State of the virtual machine", ParameterType.String, "", ""),
+		new TypedParameter("InstanceName", "Server instance name", ParameterType.String, "", ""),
+		new TypedParameter("HostName", "Server host name", ParameterType.String, "", ""),
+		new TypedParameter("HypervisorHostName", "Server hypervisor host name", ParameterType.String, "", "")
 	};
 }
