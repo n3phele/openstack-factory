@@ -1,6 +1,8 @@
 package n3phele.factory.test.integration;
 
 import static org.junit.Assert.assertEquals;
+
+import java.io.FileNotFoundException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -42,7 +44,14 @@ public class VirtualServerResourceTest {
 		//client.addFilter(new HTTPBasicAuthFilter(Resource.get("factoryUser", ""), Resource.get("factorySecret", "")));
 		
 		//load all properties from the crendentials.properties file where sensible credentials are registered for tests
-		testResource = new TestResource("n3phele.factory.test.integration.credentials");
+		try
+		{
+			testResource = new TestResource("n3phele.factory.test.integration.credentials");
+		}
+		catch(FileNotFoundException e)
+		{			
+			throw new FileNotFoundException("The necessary file with test credentials was not found. Manually create the file and put real credentials there so integration tests can reach the cloud. See tests for necessary variables.");
+		}
 		
 		String serverAddress = testResource.get("testServerAddress", "http://127.0.0.1:8888");
 		webResource = client.resource(UriBuilder.fromUri(serverAddress + "/resources/virtualServer").build());
