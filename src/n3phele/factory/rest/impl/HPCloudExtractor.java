@@ -63,10 +63,10 @@ public class HPCloudExtractor {
 								if(response != null) {									
 									String valuePrivate = getPrivateAddresses(response);
 									String valuePublic = getPublicAddresses(response);
-									result.add(new NameValue("PrivateIPAddresses", valuePrivate));
-									result.add(new NameValue("PublicIPAddresses", valuePublic));
-									log.info("Added field PrivateIPAddresses of type "+List.class+" with value "+valuePrivate);
-									log.info("Added field PublicIPAddresses of type "+List.class+" with value "+valuePublic);
+									result.add(new NameValue("privateIpAddress", valuePrivate));
+									result.add(new NameValue("publicIpAddress", valuePublic));
+									log.info("Added field privateIpAddress of type "+List.class+" with value "+valuePrivate);
+									log.info("Added field publicIpAddress of type "+List.class+" with value "+valuePublic);
 								}
 							} catch(Exception e) {
 								log.log(Level.WARNING,method.getName()+" with return "+target.getCanonicalName(), e);
@@ -152,7 +152,7 @@ public class HPCloudExtractor {
 	
 	@SuppressWarnings("unchecked")
 	private static String getPrivateAddresses(Object response){
-		List<String> list = new ArrayList<String>();
+		String address = "";
 		
 		Multimap<String,Address> multimap = (Multimap<String,Address>)response;
 		for (String access : multimap.keySet()) {
@@ -160,17 +160,18 @@ public class HPCloudExtractor {
 				Collection<Address> addresses = multimap.get(access);
 				for (Iterator iter = addresses.iterator(); iter.hasNext();) {
 					   Address add = (Address) iter.next();
-					   list.add(add.getAddr());
-					}
+					   address = (add.getAddr());
+					   return address;
+					   }
 			}
 		}
 		
-		return list.toString();
+		return address;
 	}
 	
 	@SuppressWarnings("unchecked")
 	private static String getPublicAddresses(Object response){
-		List<String> list = new ArrayList<String>();
+		String address = "";
 				
 		Multimap<String,Address> multimap = (Multimap<String,Address>)response;
 		for (String access : multimap.keySet()) {
@@ -178,12 +179,13 @@ public class HPCloudExtractor {
 				Collection<Address> addresses = multimap.get(access);
 				for (Iterator iter = addresses.iterator(); iter.hasNext();) {
 					   Address add = (Address) iter.next();
-					   list.add(add.getAddr());
+					   address = (add.getAddr());
+					   return address;
 					}
 			}
 		}
 		
-		return list.toString();
+		return address;
 	}
 	
 	private static Long getPowerState(Object response){
