@@ -110,12 +110,13 @@ public class VirtualServerResourceTest {
 		parameters.add(new NameValue("maxCount", "1"));
 		parameters.add(new NameValue("imageId", "75845"));
 		parameters.add(new NameValue("instanceType", "100"));
-		parameters.add(new NameValue("securityGroups", "default"));
+		parameters.add(new NameValue("securityGroup", "default"));
+		parameters.add(new NameValue("keyName", "liskey"));
 		parameters.add(new NameValue("locationId", "az-1.region-a.geo-1"));
 		parameters.add(new NameValue("userData", ""));
-		request.parameters = parameters;				
+		request.parameters = parameters;
 
-		ClientResponse result = resource.post(ClientResponse.class, request);		
+		ClientResponse result = resource.post(ClientResponse.class, request);
 	}
 
 }
