@@ -1164,8 +1164,8 @@ public class VirtualServerResource {
 	public final static TypedParameter outputParameters[] =  {		
 		new TypedParameter("AccessIPv4", "IPv4 public server address", ParameterType.String, "", ""),
 		new TypedParameter("AccessIPv6", "IPv6 public server address", ParameterType.String, "", ""),
-		new TypedParameter("PrivateIPAddresses", "The private ip addresses assigned to the server", ParameterType.List, "", ""),
-		new TypedParameter("PublicIPAddresses", "The public ip addresses assigned to the server", ParameterType.List, "", ""),
+		new TypedParameter("privateIpAddress", "Specifies the private IP address that is assigned to the instance.", ParameterType.String, "", ""),
+		new TypedParameter("publicIpAddress", "Specifies the public IP address of the instance.", ParameterType.String, "", ""),
 		new TypedParameter("Class", "Class of the server object", ParameterType.String, "", ""),
 		new TypedParameter("ConfigDrive", "Drive configuration of the server", ParameterType.String, "", ""),
 		new TypedParameter("Created", "Date when the server was created", ParameterType.String, "", ""),
