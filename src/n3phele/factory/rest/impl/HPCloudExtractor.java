@@ -52,7 +52,7 @@ public class HPCloudExtractor {
 			if(method.getName().startsWith("get")) {
 				String field = method.getName().substring("get".length());
 				//Ignore map of metadata
-				if((field.compareTo("Metadata"))!=0){
+				if((field.compareTo("Metadata"))!=0 && (field.compareTo("Status")!=0) && (field.compareTo("ExtendedStatus")!=0) ){
 					//Retrieve private and public IP addresses from multimap
 					if((field.compareTo("Addresses")==0)){						
 						Class<?> args[] = method.getParameterTypes();
@@ -74,29 +74,7 @@ public class HPCloudExtractor {
 							
 						}
 					}
-					//Retrieve info from ServerExtendedStatus object
-					else if((field.compareTo("ExtendedStatus")==0)){
-						Class<?> args[] = method.getParameterTypes();
-						if(args.length == 0) {
-							Class<?> target = ServerExtendedStatus.class;
-							try {
-								Object response = method.invoke(o);
-								if(response != null) {									
-									Long powerState = getPowerState(response);
-									String taskState = getTaskState(response);
-									String vmState = getVMState(response);
-									result.add(new NameValue("PowerState", powerState.toString()));
-									result.add(new NameValue("TaskState", taskState));
-									result.add(new NameValue("VmState", vmState));
-									log.info("Added field PowerState of type "+ServerExtendedStatus.class+" with value "+powerState.toString());
-									log.info("Added field TaskState of type "+ServerExtendedStatus.class+" with value "+taskState);
-									log.info("Added field VmState of type "+ServerExtendedStatus.class+" with value "+vmState);
-								}
-							} catch(Exception e) {
-								log.log(Level.WARNING,method.getName()+" with return "+target.getCanonicalName(), e);
-							}
-						}						
-					}
+			
 					//Retrieve info from ServerExtendedAttributes object
 					else if((field.compareTo("ExtendedAttributes")==0)){
 						Class<?> args[] = method.getParameterTypes();
@@ -188,28 +166,7 @@ public class HPCloudExtractor {
 		return address;
 	}
 	
-	private static Long getPowerState(Object response){
-		Optional<ServerExtendedStatus> st = (Optional<ServerExtendedStatus>)response;
-		ServerExtendedStatus status = st.get();
-		int powerState = status.getPowerState();
-		Long ret = new Long(powerState);
-		return ret;
-	}
-	
-	private static String getTaskState(Object response){
-		Optional<ServerExtendedStatus> st = (Optional<ServerExtendedStatus>)response;
-		ServerExtendedStatus status = st.get();
-		
-		return status.getTaskState();
-	}
-	
-	private static String getVMState(Object response){
-		Optional<ServerExtendedStatus> st = (Optional<ServerExtendedStatus>)response;
-		ServerExtendedStatus status = st.get();
-		
-		return status.getVmState();
-	}
-	
+
 	private static String getInstanceName(Object response){
 		Optional<ServerExtendedAttributes> sat = (Optional<ServerExtendedAttributes>)response;
 		ServerExtendedAttributes attributes = sat.get();

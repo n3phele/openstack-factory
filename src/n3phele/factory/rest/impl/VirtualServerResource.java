@@ -508,7 +508,7 @@ public class VirtualServerResource {
 					log.info("Server is spot instance");
 					result = false;
 				}
-				else if (!virtualServer.getStatus().equalsIgnoreCase(Status.ACTIVE.toString())) //TODO: Verify if we're using correct status
+				else if (!virtualServer.getStatus().equalsIgnoreCase("running")) 
 				{
 					log.info("Server is " + virtualServer.getStatus());
 					result = false;
@@ -577,13 +577,19 @@ public class VirtualServerResource {
 			Server s = hpcManager.getServerById(locationId, item.getInstanceId());
 			if (s != null)
 			{
-				Status currentStatus = s.getStatus();
-
+				//Status currentStatus = s.getStatus();
+				String currentStatus = "";
+				if(s.getStatus().toString().compareTo("ACTIVE")==0) currentStatus = "running";
+				else if(s.getStatus().toString().compareTo("BUILD")==0 || s.getStatus().toString().compareTo("REBUILD")==0 || s.getStatus().toString().compareTo("REBOOT")==0 || s.getStatus().toString().compareTo("HARD_REBOOT")==0){
+					currentStatus = "initializing";
+				}else{
+					currentStatus = "terminated";
+				}
 				/**
 				 * If the statuses are different, and the current cloud status
 				 * is ACTIVE (Running), we should update.
 				 */
-				if (!item.getStatus().equalsIgnoreCase(currentStatus.toString()) && currentStatus.compareTo(Status.ACTIVE) == 0)  //TODO: Verify if we're using correct status
+				if (!item.getStatus().equalsIgnoreCase(currentStatus) && currentStatus.compareTo("running") == 0)  
 				{
 					Map<String, String> tags = new HashMap<String, String>();
 					tags.put("n3phele-name", item.getName());
@@ -594,7 +600,7 @@ public class VirtualServerResource {
 					hpcManager.putServerTags(item.getInstanceId(), locationId, tags);
 				}
 
-				if (updateStatus(item, currentStatus.toString(), reference, sequence))
+				if (updateStatus(item, currentStatus, reference, sequence))
 					update(item);
 
 				//TODO: Should we consider to use the Enums instead of hard coded string?
@@ -648,7 +654,7 @@ public class VirtualServerResource {
 		} else
 		{
 			log.warning("Instance " + item.getInstanceId() + " not found, assumed terminated ..");
-			item.setStatus(Status.DELETED.toString());
+			item.setStatus("Terminated");
 		}
 	}
 	
@@ -679,8 +685,7 @@ public class VirtualServerResource {
 		{
 			HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(s.getAccessKey(), s.getEncryptedKey()));
 			
-			//TODO: Verify if we're using correct status
-			if( s.getStatus().equalsIgnoreCase(Status.DELETED.toString()) )
+			if( s.getStatus().equalsIgnoreCase("terminated") )
 			{
 				log.info("Found dead "+s.getName()+" with id "+s.getInstanceId()+" created "+s.getCreated());
 				manager.delete(s);
@@ -691,8 +696,7 @@ public class VirtualServerResource {
 			long now = new Date().getTime();
 			long age = ((now - created)% (60*60*1000))/60000;
 			
-			//TODO: Verify if we're using correct status
-			if(age > 55 || !s.getStatus().equalsIgnoreCase(Status.ACTIVE.toString()) || debugInstance || zombieInstance )
+			if(age > 55 || !s.getStatus().equalsIgnoreCase("running") || debugInstance || zombieInstance )
 			{
 				log.info("Killing "+s.getName()+" with id "+s.getInstanceId()+" created "+s.getCreated());
 				s.setName(debugInstance? "debug" : "zombie");
@@ -842,8 +846,7 @@ public class VirtualServerResource {
 						log.info("Claimed " + s.getInstanceId());
 						refreshVirtualServer(s);
 						
-						//TODO: Verify if we're using correct status
-						if( !s.getStatus().equalsIgnoreCase(Status.ACTIVE.toString()) )
+						if( !s.getStatus().equalsIgnoreCase("running") )
 						{
 							terminate(s);
 							continue;
@@ -852,8 +855,7 @@ public class VirtualServerResource {
 						item.setCreated(s.getCreated());
 						updateVirtualServer(item, UUID.randomUUID(), 0);
 						
-						//TODO: Verify if we're using correct status
-						if( item.getStatus().equalsIgnoreCase(Status.ACTIVE.toString()) )
+						if( item.getStatus().equalsIgnoreCase("running") )
 							return true;
 						else
 							continue; // There's no difference calling continue here, i think.
@@ -1171,7 +1173,6 @@ public class VirtualServerResource {
 		new TypedParameter("Created", "Date when the server was created", ParameterType.String, "", ""),
 		new TypedParameter("DiskConfig", "Disk config attribute from the Disk Config Extension (alias OS-DCF)", ParameterType.String, "", ""),
 		new TypedParameter("ExtendedAttributes", "Extended server attributes fields (alias OS-EXT-SRV-ATTR)", ParameterType.String, "", ""),
-		new TypedParameter("ExtendedStatus", "Extended server status fields (alias OS-EXT-STS)", ParameterType.String, "", ""),
 		new TypedParameter("Flavor", "Standard Instance type of the server", ParameterType.String, "", ""),
 		new TypedParameter("HostId", "Host identifier, or null if in Server.Status.BUILD", ParameterType.String, "", ""),
 		new TypedParameter("Id", "Id of the server", ParameterType.String, "", ""),
@@ -1179,14 +1180,10 @@ public class VirtualServerResource {
 		new TypedParameter("KeyName", "KeyName if extension is present and there is a value for this server", ParameterType.String, "", ""),
 		new TypedParameter("Links", "The links of the id address allocated to the new server", ParameterType.List, "", ""),
 		new TypedParameter("Name", "Name of the server", ParameterType.String, "", ""),
-		new TypedParameter("Status", "Indication of the current server state. Possible values: ACTIVE, BUILD, REBUILD, SUSPENDED, RESIZE, VERIFY_RESIZE, REVERT_RESIZE, PASSWORD, REBOOT, HARD_REBOOT, DELETED, UNKNOWN, and ERROR.", ParameterType.String, "", ""),
 		new TypedParameter("TenantId", "Group id of the server", ParameterType.String, "", ""),
 		new TypedParameter("Updated", "When the server was last updated", ParameterType.String, "", ""),
 		new TypedParameter("UserId", "User id of the server", ParameterType.String, "", ""),
 		new TypedParameter("UuId", "Unique server id", ParameterType.String, "", ""),
-		new TypedParameter("PowerState", "Server power state", ParameterType.Long, "", ""),
-		new TypedParameter("TaskState", "State of the task on server", ParameterType.String, "", ""),
-		new TypedParameter("VmState", "State of the virtual machine", ParameterType.String, "", ""),
 		new TypedParameter("InstanceName", "Server instance name", ParameterType.String, "", ""),
 		new TypedParameter("HostName", "Server host name", ParameterType.String, "", ""),
 		new TypedParameter("HypervisorHostName", "Server hypervisor host name", ParameterType.String, "", "")
