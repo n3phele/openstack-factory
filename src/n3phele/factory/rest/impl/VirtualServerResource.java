@@ -1156,7 +1156,7 @@ public class VirtualServerResource {
 		new TypedParameter("imageId", "Unique ID of a machine image, returned by a call to RegisterImage", ParameterType.String, "", "75845"),
 		new TypedParameter("keyName", "Name of the SSH key  to be used for communication with the VM", ParameterType.String, "", "hpdefault"),
 		new TypedParameter("nodeCount", "Number of instances to launch.", ParameterType.Long, "", "1"),
-		new TypedParameter("locationId", "Unique ID of hpcloud zone. Valid Values: az-1.region-a.geo-1 | az-2.region-a.geo-1 | az-3.region-a.geo-1", ParameterType.String, "", "az-1.region-a.geo-1"),
+		new TypedParameter("locationId", "Unique ID of hpcloud zone. Valid Values: az-1.region-a.geo-1 | az-2.region-a.geo-1 | az-3.region-a.geo-1", ParameterType.String, null, "az-1.region-a.geo-1"),
 		new TypedParameter("securityGroup", "Name of the security group which controls the open TCP/IP ports for the VM.", ParameterType.String, "", "default"),
 		new TypedParameter("userData", "Base64-encoded MIME user data made available to the instance(s). May be used to pass startup commands.", ParameterType.String, "value", "#!/bin/bash\necho n3phele agent injection... \nset -x\n wget -q -O - https://n3phele-agent.s3.amazonaws.com/n3ph-install-tgz-basic | su - -c '/bin/bash -s ec2-user ~/agent ~/sandbox' ec2-user\n")
 	};
