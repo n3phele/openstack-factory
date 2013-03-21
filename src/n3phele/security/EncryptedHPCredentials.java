@@ -42,7 +42,7 @@ public class EncryptedHPCredentials {
 	
 	public EncryptedHPCredentials(String passwd)
 	{
-		this.password = passwd;
+		this.password = "elehp3N" + passwd;
 	}
 	
 	public void setCredentials(String encryptedAccessKey, String encryptedSecretKey) throws UnsupportedEncodingException, NoSuchAlgorithmException {

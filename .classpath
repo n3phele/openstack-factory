@@ -55,6 +55,7 @@
 	<classpathentry kind="lib" path="testlibs/grizzly-rcm-2.1.jar"/>
 	<classpathentry kind="lib" path="testlibs/grizzly-utils-2.0-b2.jar"/>
 	<classpathentry kind="lib" path="testlibs/grizzly-servlet-webserver-1.9.9.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/slf4j-simple-1.7.4.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jersey-bundle-1.17.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/asm-3.3.1.jar"/>

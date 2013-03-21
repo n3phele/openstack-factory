@@ -26,8 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import javax.annotation.security.RolesAllowed;
 import javax.mail.Message;
@@ -70,17 +68,17 @@ import n3phele.service.model.core.ParameterType;
 import n3phele.service.model.core.TypedParameter;
 import n3phele.service.model.core.VirtualServer;
 
-import org.jclouds.openstack.nova.v2_0.domain.Address;
 import org.jclouds.openstack.nova.v2_0.domain.KeyPair;
 import org.jclouds.openstack.nova.v2_0.domain.RebootType;
 import org.jclouds.openstack.nova.v2_0.domain.SecurityGroup;
 import org.jclouds.openstack.nova.v2_0.domain.Server;
 import org.jclouds.openstack.nova.v2_0.domain.Server.Status;
 import org.jclouds.openstack.nova.v2_0.domain.ServerCreated;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.apphosting.api.DeadlineExceededException;
 import com.googlecode.objectify.Key;
-import com.google.common.collect.Multimap;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
@@ -95,8 +93,9 @@ import com.sun.jersey.api.client.WebResource;
 public class VirtualServerResource {
 	private Client						client	= null;
 	private final VirtualServerManager	manager;
-	private final static Logger			log		= Logger.getLogger(VirtualServerResource.class.getName());
+	
 	private final static String FACTORY_NAME	= "nova-factory";
+	final Logger logger = LoggerFactory.getLogger(VirtualServerResource.class);
 
 	public VirtualServerResource()
 	{
@@ -127,7 +126,7 @@ public class VirtualServerResource {
 	@Path("virtualServer/accountTest")
 	public String accountTest(@DefaultValue("false") @FormParam("fix") Boolean fix, @FormParam("id") String id, @FormParam("secret") String secret, @FormParam("key") String key, @FormParam("location") URI location, @FormParam("locationId") String locationId, @FormParam("email") String email, @FormParam("firstName") String firstName, @FormParam("lastName") String lastName, @FormParam("securityGroup") String securityGroup)
 	{
-		log.info("accountTest with fix " + fix);
+		logger.info("accountTest with fix " + fix);
 		if (fix && (email == null || email.trim().length() == 0) || (firstName == null || firstName.trim().length() == 0) || (lastName == null || lastName.trim().length() == 0))
 			throw new IllegalArgumentException("email details must be supplied with option to fix");
 		
@@ -163,7 +162,7 @@ public class VirtualServerResource {
 	@Path("virtualServer")
 	public Collection<BaseEntity> list(@DefaultValue("false") @QueryParam("summary") Boolean summary)
 	{
-		log.info("get entered with summary " + summary);
+		logger.info("get entered with summary " + summary);
 
 		Collection<BaseEntity> result = getCollection().collection(summary);
 		return result;
@@ -209,8 +208,12 @@ public class VirtualServerResource {
 	@Path("virtualServer")
 	public Response create(ExecutionFactoryCreateRequest r) throws Exception
 	{
+		logger.info("Create VM called");
+
 		int nodeCount = 1;
+		logger.info("Creating hp cloud request");
 		HPCloudCreateServerRequest hpcRequest = new HPCloudCreateServerRequest();
+		logger.info("Creating hp cloud manager with access key: "+r.accessKey+" and encryptedSecret: "+r.encryptedSecret);
 		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(r.accessKey, r.encryptedSecret));
 		
 		for (NameValue p : r.parameters)
@@ -439,7 +442,7 @@ public class VirtualServerResource {
 			add(clone);
 		} catch (Exception e)
 		{
-			log.log(Level.SEVERE, "makeZombie delete of instanceId " + instanceId, e);
+			logger.error("makeZombie delete of instanceId " + instanceId, e);
 			deleteInstance(item, UUID.randomUUID(), 0);
 			throw e;
 		}
@@ -481,7 +484,7 @@ public class VirtualServerResource {
 			add(clone);
 		} catch (Exception e)
 		{
-			log.log(Level.SEVERE, "makeDebug delete of instanceId "	+ instanceId, e);
+			logger.error("makeDebug delete of instanceId "	+ instanceId, e);
 			item.setInstanceId(instanceId);
 			deleteInstance(item, UUID.randomUUID(), 0);
 			throw e;
@@ -498,25 +501,25 @@ public class VirtualServerResource {
 		{
 			if (virtualServer.getSiblings() != null	&& virtualServer.getSiblings().size() > 1)
 			{
-				log.info("Server has " + virtualServer.getSiblings().size()	+ " siblings");
+				logger.info("Server has " + virtualServer.getSiblings().size()	+ " siblings");
 				result = false;
 			}
 			else
 			{
 				if (virtualServer.getSpotId() != null && virtualServer.getSpotId().length() != 0)
 				{
-					log.info("Server is spot instance");
+					logger.info("Server is spot instance");
 					result = false;
 				}
 				else if (!virtualServer.getStatus().equalsIgnoreCase("running")) 
 				{
-					log.info("Server is " + virtualServer.getStatus());
+					logger.info("Server is " + virtualServer.getStatus());
 					result = false;
 				}
 			}
 		} else
 		{
-			log.info("Null server or instanceId");
+			logger.info("Null server or instanceId");
 		}
 		return result;
 	}
@@ -535,7 +538,7 @@ public class VirtualServerResource {
 
 		Collection<BaseEntity> result = refreshCollection();
 
-		log.info(String.format("-----refresh-- %d ms processing %d items", (Calendar.getInstance().getTimeInMillis() - start), result.getTotal()));
+		logger.info(String.format("-----refresh-- %d ms processing %d items", (Calendar.getInstance().getTimeInMillis() - start), result.getTotal()));
 		return result;
 	}
 
@@ -566,7 +569,7 @@ public class VirtualServerResource {
 			
 			if (item.getStatus().equals("terminated"))
 			{
-				log.warning("Instance " + item.getName() + " terminated .. purging");
+				logger.warn("Instance " + item.getName() + " terminated .. purging");
 				delete(item);
 				return;
 			}
@@ -606,13 +609,13 @@ public class VirtualServerResource {
 				//TODO: Should we consider to use the Enums instead of hard coded string?
 				if (item.getStatus().equals("terminated"))
 				{
-					log.warning("Instance " + item.getInstanceId() + " terminated .. purging");
+					logger.warn("Instance " + item.getInstanceId() + " terminated .. purging");
 					delete(item);
 					return;
 				}
 			} else
 			{
-				log.warning("Instance " + item.getInstanceId() + " not found, assumed terminated .. purging");
+				logger.warn("Instance " + item.getInstanceId() + " not found, assumed terminated .. purging");
 				delete(item);
 				return;
 			}
@@ -653,7 +656,7 @@ public class VirtualServerResource {
 			item.setStatus(currentStatus.toString());
 		} else
 		{
-			log.warning("Instance " + item.getInstanceId() + " not found, assumed terminated ..");
+			logger.warn("Instance " + item.getInstanceId() + " not found, assumed terminated ..");
 			item.setStatus("Terminated");
 		}
 	}
@@ -687,7 +690,7 @@ public class VirtualServerResource {
 			
 			if( s.getStatus().equalsIgnoreCase("terminated") )
 			{
-				log.info("Found dead "+s.getName()+" with id "+s.getInstanceId()+" created "+s.getCreated());
+				logger.info("Found dead "+s.getName()+" with id "+s.getInstanceId()+" created "+s.getCreated());
 				manager.delete(s);
 				return true;
 			}
@@ -698,7 +701,7 @@ public class VirtualServerResource {
 			
 			if(age > 55 || !s.getStatus().equalsIgnoreCase("running") || debugInstance || zombieInstance )
 			{
-				log.info("Killing "+s.getName()+" with id "+s.getInstanceId()+" created "+s.getCreated());
+				logger.info("Killing "+s.getName()+" with id "+s.getInstanceId()+" created "+s.getCreated());
 				s.setName(debugInstance? "debug" : "zombie");
 				update(s);
 				
@@ -727,7 +730,7 @@ public class VirtualServerResource {
 						log.log(Level.WARNING, s.getUri()+" refresh failed. ignoring..",ignore);
 					}*/
 					catch (Exception e) {
-						log.log(Level.WARNING, s.getUri()+" refresh failed. Killing..",e);
+						logger.warn(s.getUri()+" refresh failed. Killing..",e);
 						try {
 							terminate(s);
 						} catch (Exception another) {
@@ -759,7 +762,7 @@ public class VirtualServerResource {
 
 				if (locationId == null)
 				{
-					log.log(Level.SEVERE, "locationId is null, cannot delete instance "	+ item.getInstanceId(), new IllegalArgumentException("locationId: null"));
+					logger.error("locationId is null, cannot delete instance "	+ item.getInstanceId(), new IllegalArgumentException("locationId: null"));
 					throw new IllegalArgumentException("locationId: null");
 				}
 
@@ -767,13 +770,13 @@ public class VirtualServerResource {
 
 				if (result)
 				{
-					log.warning("Instance " + item.getInstanceId() + "deleted");
+					logger.warn("Instance " + item.getInstanceId() + "deleted");
 					if (updateStatus(item, "Terminated", reference, sequence))
 						update(item);
 					
 				} else
 				{
-					log.warning("Instance " + item.getInstanceId() + "could not be deleted");
+					logger.warn("Instance " + item.getInstanceId() + "could not be deleted");
 				}
 			}
 			else
@@ -784,7 +787,7 @@ public class VirtualServerResource {
 
 		} catch (Exception e)
 		{
-			log.log(Level.SEVERE, "Cleanup delete of instanceId " + instanceId, e);
+			logger.error("Cleanup delete of instanceId " + instanceId, e);
 			throw e;
 		}
 
@@ -795,13 +798,13 @@ public class VirtualServerResource {
 		List<VirtualServer> zombies = getZombie();
 		if (zombies != null)
 		{
-			log.info("Got " + zombies.size() + " Zombies ");
+			logger.info("Got " + zombies.size() + " Zombies ");
 			zombieCheck: for (VirtualServer s : zombies)
 			{
 				boolean locationMatch = s.getLocation().equals(item.getLocation());
 				boolean accessMatch = s.getAccessKey().equals(item.getAccessKey());
 				boolean secretMatch = s.getEncryptedKey().equals(item.getEncryptedKey());
-				log.info(" Zombie " + s.getInstanceId() + " location "+ locationMatch + " access " + accessMatch + " secret "+ secretMatch);
+				logger.info(" Zombie " + s.getInstanceId() + " location "+ locationMatch + " access " + accessMatch + " secret "+ secretMatch);
 				
 				if (locationMatch && accessMatch && secretMatch)
 				{
@@ -810,7 +813,7 @@ public class VirtualServerResource {
 					{
 						if (!SafeEquals(x.getValue(), map.get(x.getKey())))
 						{
-							log.info("Mismatch on " + x.getKey() + " need "+ x.getValue() + " zombie "+ map.get(x.getKey()));
+							logger.info("Mismatch on " + x.getKey() + " need "+ x.getValue() + " zombie "+ map.get(x.getKey()));
 							continue zombieCheck;
 						}
 					}
@@ -829,7 +832,7 @@ public class VirtualServerResource {
 						claimed = true;
 					} catch (Exception e)
 					{
-						log.log(Level.WARNING, "Zombie processing contention", e);
+						logger.warn( "Zombie processing contention", e);
 					} finally
 					{
 						if (itemDaoTxn.ofy().getTxn().isActive())
@@ -839,11 +842,11 @@ public class VirtualServerResource {
 					{
 						List<VirtualServer> leftOverZombies = getZombie();
 						if (leftOverZombies != null)
-							log.info("Got " + leftOverZombies.size() + " zombies remaining");
+							logger.info("Got " + leftOverZombies.size() + " zombies remaining");
 						else
-							log.info("Got 0 Zombies remaining");
+							logger.info("Got 0 Zombies remaining");
 						
-						log.info("Claimed " + s.getInstanceId());
+						logger.info("Claimed " + s.getInstanceId());
 						refreshVirtualServer(s);
 						
 						if( !s.getStatus().equalsIgnoreCase("running") )
@@ -862,7 +865,7 @@ public class VirtualServerResource {
 						
 					} else
 					{
-						log.warning("Zombie contention on " + s.getInstanceId());
+						logger.warn("Zombie contention on " + s.getInstanceId());
 					}
 				}
 			}
@@ -892,10 +895,10 @@ public class VirtualServerResource {
 			sendNotification(s, oldStatus.toLowerCase(), newStatus, reference.toString(), sequence);
 		} catch (Exception e)
 		{
-			log.log(Level.INFO, "SendNotification exception to <" + s.getNotification() + "> from " + s.getUri() + " old: " + oldStatus + " new: " + s.getStatus(), e);
+			logger.info("SendNotification exception to <" + s.getNotification() + "> from " + s.getUri() + " old: " + oldStatus + " new: " + s.getStatus(), e);
 			if (oldStatus.equals(newStatus.toUpperCase()))
 			{
-				log.warning("Cancelling SendNotification to <" + s.getNotification() + "> from " + s.getUri() + " old: " + oldStatus + " new: " + s.getStatus());
+				logger.warn("Cancelling SendNotification to <" + s.getNotification() + "> from " + s.getUri() + " old: " + oldStatus + " new: " + s.getStatus());
 			}
 			else
 			{
@@ -908,7 +911,7 @@ public class VirtualServerResource {
 	private void sendNotification(VirtualServer s, String oldStatus, String newStatus, String reference, int sequence) throws Exception
 	{
 		URI notification = s.getNotification();
-		log.info("SendNotification to <" + notification + "> from " + s.getUri() + " old: " + oldStatus + " new: " + s.getStatus());
+		logger.info("SendNotification to <" + notification + "> from " + s.getUri() + " old: " + oldStatus + " new: " + s.getStatus());
 
 		if (notification == null)
 			return;
@@ -920,10 +923,10 @@ public class VirtualServerResource {
 		WebResource resource = client.resource(s.getNotification());
 
 		ClientResponse response = resource.queryParam("source", s.getUri().toString()).queryParam("oldStatus", oldStatus).queryParam("newStatus", newStatus).queryParam("reference", reference).queryParam("sequence", Integer.toString(sequence)).type(MediaType.TEXT_PLAIN).get(ClientResponse.class);
-		log.info("Notificaion status " + response.getStatus());
+		logger.info("Notificaion status " + response.getStatus());
 		if (response.getStatus() == 410)
 		{
-			log.severe("VM GONE .. killing " + s.getUri() + " silencing reporting to " + s.getNotification());
+			logger.info("VM GONE .. killing " + s.getUri() + " silencing reporting to " + s.getNotification());
 			s.setNotification(null);
 			deleteInstance(s, UUID.randomUUID(), 0);
 		}
@@ -943,12 +946,12 @@ public class VirtualServerResource {
 
 		if (newKey != null)
 		{
-			log.warning("Got " + newKey.toString());
+			logger.warn("Got " + newKey.toString());
 			sendNotificationEmail(newKey, email, firstName, lastName, location);
 			return true;
 		}
 
-		log.severe("Key pair couldn't be created");
+		logger.error("Key pair couldn't be created");
 		return false;
 	}
 
@@ -990,16 +993,16 @@ public class VirtualServerResource {
 
 		} catch (AddressException e)
 		{
-			log.log(Level.SEVERE, "Email to " + to, e);
+			logger.error("Email to " + to, e);
 		} catch (MessagingException e)
 		{
-			log.log(Level.SEVERE, "Email to " + to, e);
+			logger.error("Email to " + to, e);
 		} catch (UnsupportedEncodingException e)
 		{
-			log.log(Level.SEVERE, "Email to " + to, e);
+			logger.error( "Email to " + to, e);
 		} catch (Exception e)
 		{
-			log.log(Level.SEVERE, "Email to " + to, e);
+			logger.error( "Email to " + to, e);
 		}
 	}
 
@@ -1041,16 +1044,16 @@ public class VirtualServerResource {
 
 		} catch (AddressException e)
 		{
-			log.log(Level.SEVERE, "Email to " + to, e);
+			logger.error( "Email to " + to, e);
 		} catch (MessagingException e)
 		{
-			log.log(Level.SEVERE, "Email to " + to, e);
+			logger.error( "Email to " + to, e);
 		} catch (UnsupportedEncodingException e)
 		{
-			log.log(Level.SEVERE, "Email to " + to, e);
+			logger.error("Email to " + to, e);
 		} catch (Exception e)
 		{
-			log.log(Level.SEVERE, "Email to " + to, e);
+			logger.error("Email to " + to, e);
 		}
 
 	}

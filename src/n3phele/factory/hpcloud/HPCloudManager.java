@@ -12,6 +12,8 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import n3phele.factory.rest.impl.VirtualServerResource;
+
 import org.jclouds.ContextBuilder;
 import org.jclouds.compute.ComputeService;
 import org.jclouds.compute.ComputeServiceContext;
@@ -34,6 +36,8 @@ import org.jclouds.openstack.nova.v2_0.extensions.SecurityGroupApi;
 import org.jclouds.openstack.nova.v2_0.features.ServerApi;
 import org.jclouds.openstack.nova.v2_0.options.CreateServerOptions;
 import org.jclouds.rest.RestContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableSet;
@@ -49,6 +53,7 @@ public class HPCloudManager {
 	private NovaApi			mNovaApi;
 
 	public static String	JCLOUD_PROVIDER	= "hpcloud-compute";
+	final Logger logger = LoggerFactory.getLogger(HPCloudManager.class);
 
 	/**
 	 * @param creds
@@ -56,7 +61,11 @@ public class HPCloudManager {
 	 */
 	public HPCloudManager(HPCloudCredentials creds)
 	{
+		logger.info("credential identity: "+creds.getIdentity());
+		logger.info("credential secret key: "+creds.getSecretKey());
 		initComputeService(creds.getIdentity(), creds.getSecretKey());
+		
+		
 	}
 
 	/**
@@ -68,10 +77,11 @@ public class HPCloudManager {
 	 */
 	private void initComputeService(String identity, String secretKey)
 	{
-		Properties properties = new Properties();
+		Properties properties = new Properties();		
 		long scriptTimeout = TimeUnit.MILLISECONDS.convert(20, TimeUnit.MINUTES);
 		properties.setProperty(TIMEOUT_SCRIPT_COMPLETE, scriptTimeout + "");
 		properties.setProperty("jclouds.modules","org.jclouds.gae.config.AsyncGoogleAppEngineConfigurationModule");
+		properties.setProperty("jclouds.keystone.credential-type", "apiAccessKeyCredentials");
 
 		Iterable<Module> modules = ImmutableSet.<Module> of(new SLF4JLoggingModule(), new AsyncGoogleAppEngineConfigurationModule());
 
