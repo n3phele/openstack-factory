@@ -83,6 +83,7 @@ import com.googlecode.objectify.Key;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.core.util.Base64;
 
 
 /** EC2 Virtual Server Resource manages the lifecycle of virtual machines on Amazon EC2 (or compatible) clouds.
@@ -244,7 +245,12 @@ public class VirtualServerResource {
 
 			if (p.getKey().equalsIgnoreCase("userData"))
 			{
-				hpcRequest.userData = p.getValue();
+				//FIXME: Openstack just accept userData as a plain text.
+				String data = p.getValue();
+				if( Base64.isBase64(data) )
+					hpcRequest.userData = new String( Base64.decode(data) );
+				else
+					hpcRequest.userData = data;
 				logger.info("User Data: "+hpcRequest.userData);
 			}
 
@@ -558,6 +564,7 @@ public class VirtualServerResource {
 	 */
 
 	protected void updateVirtualServer(VirtualServer item, UUID reference, int sequence) throws IllegalArgumentException
+		
 	{			
 		HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(item.getAccessKey(), item.getEncryptedKey()));
 		String instanceId = item.getInstanceId();
