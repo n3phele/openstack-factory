@@ -209,12 +209,9 @@ public class VirtualServerResource {
 	@Path("virtualServer")
 	public Response create(ExecutionFactoryCreateRequest r) throws Exception
 	{
-		logger.info("Create VM called");
-
 		int nodeCount = 1;
 		logger.info("Creating hp cloud request");
 		HPCloudCreateServerRequest hpcRequest = new HPCloudCreateServerRequest();
-		logger.info("Creating hp cloud manager with access key: "+r.accessKey+" and encryptedSecret: "+r.encryptedSecret);
 		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(r.accessKey, r.encryptedSecret));
 		
 		for (NameValue p : r.parameters)
@@ -248,6 +245,7 @@ public class VirtualServerResource {
 			if (p.getKey().equalsIgnoreCase("userData"))
 			{
 				hpcRequest.userData = p.getValue();
+				logger.info("User Data: "+hpcRequest.userData);
 			}
 
 			if (p.getKey().equalsIgnoreCase("locationId"))
@@ -268,7 +266,6 @@ public class VirtualServerResource {
 		List<URI> vmRefs = new ArrayList<URI>(resultList.size());
 		ArrayList<String> siblings = new ArrayList<String>(resultList.size());
 		ArrayList<VirtualServer> vsList = new ArrayList<VirtualServer>(resultList.size());
-		logger.info("Size of servers created list: "+resultList.size());
 		Date epoch = new Date();
 		for (ServerCreated srv : resultList)
 		{
@@ -561,9 +558,7 @@ public class VirtualServerResource {
 	 */
 
 	protected void updateVirtualServer(VirtualServer item, UUID reference, int sequence) throws IllegalArgumentException
-	{
-		logger.info("Updating virtual server id: "+item.getInstanceId());
-		
+	{			
 		HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(item.getAccessKey(), item.getEncryptedKey()));
 		String instanceId = item.getInstanceId();
 		boolean madeIntoZombie = item.isZombie();
@@ -583,10 +578,8 @@ public class VirtualServerResource {
 		} else if (instanceId != null && instanceId.length() > 0)
 		{
 			String locationId = getLocationId(item);
-			logger.info("Virtual Server locationId: "+locationId);
 			
 			Server s = hpcManager.getServerById(locationId, item.getInstanceId());
-			logger.info("Server status retrieved from HPCloud: "+s.getStatus());
 			if (s != null)
 			{
 				String currentStatus = "";
@@ -606,9 +599,7 @@ public class VirtualServerResource {
 					tags.put("n3phele-name", item.getName());
 					tags.put("n3phele-factory", Resource.get("factoryName", FACTORY_NAME));
 					tags.put("n3phele-uri", item.getUri().toString());
-					logger.info("Added metadata");
 					s.getExtendedAttributes();
-					logger.info("Setting output parameters");	
 					boolean gotPublicIP = false;
 					String privateIpAddress = "";
 					String publicIpAddress = "";
@@ -1204,7 +1195,6 @@ public class VirtualServerResource {
 		new TypedParameter("ConfigDrive", "Drive configuration of the server", ParameterType.String, "", ""),
 		new TypedParameter("Created", "Date when the server was created", ParameterType.String, "", ""),
 		new TypedParameter("DiskConfig", "Disk config attribute from the Disk Config Extension (alias OS-DCF)", ParameterType.String, "", ""),
-		new TypedParameter("ExtendedAttributes", "Extended server attributes fields (alias OS-EXT-SRV-ATTR)", ParameterType.String, "", ""),
 		new TypedParameter("Flavor", "Standard Instance type of the server", ParameterType.String, "", ""),
 		new TypedParameter("HostId", "Host identifier, or null if in Server.Status.BUILD", ParameterType.String, "", ""),
 		new TypedParameter("Id", "Id of the server", ParameterType.String, "", ""),
@@ -1215,9 +1205,6 @@ public class VirtualServerResource {
 		new TypedParameter("TenantId", "Group id of the server", ParameterType.String, "", ""),
 		new TypedParameter("Updated", "When the server was last updated", ParameterType.String, "", ""),
 		new TypedParameter("UserId", "User id of the server", ParameterType.String, "", ""),
-		new TypedParameter("UuId", "Unique server id", ParameterType.String, "", ""),
-		new TypedParameter("InstanceName", "Server instance name", ParameterType.String, "", ""),
-		new TypedParameter("HostName", "Server host name", ParameterType.String, "", ""),
-		new TypedParameter("HypervisorHostName", "Server hypervisor host name", ParameterType.String, "", "")
+		new TypedParameter("UuId", "Unique server id", ParameterType.String, "", "")
 	};
 }
