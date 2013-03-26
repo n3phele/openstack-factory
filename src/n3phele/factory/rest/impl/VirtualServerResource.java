@@ -61,6 +61,7 @@ import n3phele.service.core.Resource;
 import n3phele.service.model.core.AbstractManager;
 import n3phele.service.model.core.BaseEntity;
 import n3phele.service.model.core.Collection;
+import n3phele.service.model.core.CreateVirtualServerResponse;
 import n3phele.service.model.core.ExecutionFactoryCreateRequest;
 import n3phele.service.model.core.GenericModelDao;
 import n3phele.service.model.core.NameValue;
@@ -270,10 +271,10 @@ public class VirtualServerResource {
 		hpcRequest.serverName = r.name;
 
 		List<ServerCreated> resultList = hpcManager.createServerRequest(hpcRequest);
-		List<URI> uriList = new ArrayList<URI>(resultList.size());
+		List<URI> vmRefs = new ArrayList<URI>(resultList.size());
 		ArrayList<String> siblings = new ArrayList<String>(resultList.size());
 		ArrayList<VirtualServer> vsList = new ArrayList<VirtualServer>(resultList.size());
-		
+		logger.info("Size of servers created list: "+resultList.size());
 		Date epoch = new Date();
 		for (ServerCreated srv : resultList)
 		{
@@ -281,12 +282,14 @@ public class VirtualServerResource {
 			item.setCreated(epoch);
 			item.setInstanceId(srv.getId());
 			add(item);
-			vsList.add(item);			
+			logger.info("Created new VirtualServer: "+item.getUri());
+			vsList.add(item);	
+			vmRefs.add(item.getUri());
 		}
 		
 		for(VirtualServer s : vsList)
 		{
-			uriList.add(s.getUri());
+			//uriList.add(s.getUri());
 			siblings.add(s.getUri().toString());
 		}
 		
@@ -295,7 +298,7 @@ public class VirtualServerResource {
 			s.setSiblings(siblings);
 			update(s);
 		}
-		return Response.created(uriList.get(0)).entity(new HPCloudCreateServerResponse(uriList)).build();
+		return Response.created(vsList.get(0).getUri()).entity(new CreateVirtualServerResponse(vmRefs)).build();
 	}
 
 	/** Get details of a specific virtual server. This operation does a deep get, getting information from the cloud before
@@ -311,6 +314,7 @@ public class VirtualServerResource {
 	@RolesAllowed("authenticated")
 	public VirtualServer get(@PathParam("id") Long id) throws NotFoundException
 	{
+		logger.info("Getting VirtualServer with id "+id);
 		VirtualServer item = deepGet(id);
 
 		return item;
@@ -551,6 +555,7 @@ public class VirtualServerResource {
 	protected VirtualServer deepGet(Long id) throws NotFoundException
 	{
 		VirtualServer s = load(id);
+		logger.info("Virtual Server retrieved: "+s.getInstanceId());
 		updateVirtualServer(s, UUID.randomUUID(), 0);
 		return s;
 	}
@@ -563,6 +568,8 @@ public class VirtualServerResource {
 
 	protected void updateVirtualServer(VirtualServer item, UUID reference, int sequence) throws IllegalArgumentException
 	{
+		logger.info("Updating virtual server id: "+item.getInstanceId());
+		
 		HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(item.getAccessKey(), item.getEncryptedKey()));
 		String instanceId = item.getInstanceId();
 		boolean madeIntoZombie = item.isZombie();
@@ -582,14 +589,15 @@ public class VirtualServerResource {
 		} else if (instanceId != null && instanceId.length() > 0)
 		{
 			String locationId = getLocationId(item);
-
+			logger.info("Virtual Server locationId: "+locationId);
+			
 			Server s = hpcManager.getServerById(locationId, item.getInstanceId());
+			logger.info("Server status retrieved from HPCloud: "+s.getStatus());
 			if (s != null)
 			{
-				//Status currentStatus = s.getStatus();
 				String currentStatus = "";
-				if(s.getStatus().toString().compareTo("ACTIVE")==0) currentStatus = "running";
-				else if(s.getStatus().toString().compareTo("BUILD")==0 || s.getStatus().toString().compareTo("REBUILD")==0 || s.getStatus().toString().compareTo("REBOOT")==0 || s.getStatus().toString().compareTo("HARD_REBOOT")==0){
+				if(s.getStatus().toString().compareTo("BUILD")==0 ||s.getStatus().toString().compareTo("ACTIVE")==0) currentStatus = "running";
+				else if( s.getStatus().toString().compareTo("REBUILD")==0 || s.getStatus().toString().compareTo("REBOOT")==0 || s.getStatus().toString().compareTo("HARD_REBOOT")==0){
 					currentStatus = "initializing";
 				}else{
 					currentStatus = "terminated";
@@ -604,8 +612,29 @@ public class VirtualServerResource {
 					tags.put("n3phele-name", item.getName());
 					tags.put("n3phele-factory", Resource.get("factoryName", FACTORY_NAME));
 					tags.put("n3phele-uri", item.getUri().toString());
+					logger.info("Added metadata");
 					s.getExtendedAttributes();
-					item.setOutputParameters(HPCloudExtractor.extract(s));					
+					logger.info("Setting output parameters");	
+					boolean gotPublicIP = false;
+					String privateIpAddress = "";
+					String publicIpAddress = "";
+					while(!gotPublicIP){
+						item.setOutputParameters(HPCloudExtractor.extract(s));		
+						
+						for(int i = 0; i < item.getOutputParameters().size(); i++){
+							if(item.getOutputParameters().get(i).getKey().equalsIgnoreCase("privateIpAddress")){
+								privateIpAddress = item.getOutputParameters().get(i).getValue();
+							}
+							
+							else if(item.getOutputParameters().get(i).getKey().equalsIgnoreCase("publicIpAddress")){
+								publicIpAddress = item.getOutputParameters().get(i).getValue();
+							}
+						}
+						
+						if(privateIpAddress.equalsIgnoreCase(publicIpAddress))gotPublicIP = false;
+						else gotPublicIP = true;
+						
+					}
 					hpcManager.putServerTags(item.getInstanceId(), locationId, tags);
 				}
 

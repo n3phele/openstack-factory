@@ -19,8 +19,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 
 import n3phele.service.model.core.NameValue;
@@ -29,6 +27,8 @@ import org.jclouds.openstack.nova.v2_0.domain.Address;
 import org.jclouds.openstack.nova.v2_0.domain.Server;
 import org.jclouds.openstack.nova.v2_0.domain.ServerExtendedAttributes;
 import org.jclouds.openstack.nova.v2_0.domain.ServerExtendedStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Multimap;
@@ -38,7 +38,8 @@ import com.google.common.collect.Multimap;
  *
  */
 public class HPCloudExtractor {
-	private final static Logger log = Logger.getLogger(HPCloudExtractor.class.getName());  
+	final static Logger logger = LoggerFactory.getLogger(HPCloudExtractor.class);
+
 	/** Extract object name/value pairs by introspection. The processing looks for object methods that being with "get" and
 	 * have no arguments. The methods are invoked and if a non-null result is returned, then the method name with "get" removed
 	 * and the string version of the result form a name/value pair.
@@ -46,6 +47,7 @@ public class HPCloudExtractor {
 	 * @return list of extracted name/value pairs
 	 */
 	public static ArrayList<NameValue> extract(Server o) {
+		logger.info("Extracting output parameters");
 		ArrayList<NameValue> result = new ArrayList<NameValue>();
 		Method methods[] = o.getClass().getMethods();
 		for(Method method : methods) {
@@ -65,13 +67,13 @@ public class HPCloudExtractor {
 									String valuePublic = getPublicAddresses(response);
 									result.add(new NameValue("privateIpAddress", valuePrivate));
 									result.add(new NameValue("publicIpAddress", valuePublic));
-									log.info("Added field privateIpAddress of type "+List.class+" with value "+valuePrivate);
-									log.info("Added field publicIpAddress of type "+List.class+" with value "+valuePublic);
+									logger.info("Added field privateIpAddress of type "+List.class+" with value "+valuePrivate);
+									logger.info("Added field publicIpAddress of type "+List.class+" with value "+valuePublic);
 								}
 							} catch(Exception e) {
-								log.log(Level.WARNING,method.getName()+" with return "+target.getCanonicalName(), e);
+								logger.warn(method.getName()+" with return "+target.getCanonicalName(), e);
 							}
-							
+						
 						}
 					}
 			
@@ -83,18 +85,18 @@ public class HPCloudExtractor {
 							try {
 								Object response = method.invoke(o);
 								if(response != null) {									
-									String instanceName = getInstanceName(response);
-									String hostName = getHostName(response);
-									String hypName = getHypervisorHostName(response);
-									result.add(new NameValue("InstanceName", instanceName));
-									result.add(new NameValue("HostName", hostName));
-									result.add(new NameValue("HypervisorHostName", hypName));
-									log.info("Added field PowerState of type "+ServerExtendedAttributes.class+" with value "+instanceName);
-									log.info("Added field TaskState of type "+ServerExtendedAttributes.class+" with value "+hostName);
-									log.info("Added field VMState of type "+ServerExtendedAttributes.class+" with value "+hypName);
+									//String instanceName = getInstanceName(response);
+									//String hostName = getHostName(response);
+									//String hypName = getHypervisorHostName(response);
+									//result.add(new NameValue("InstanceName", instanceName));
+									//result.add(new NameValue("HostName", hostName));
+									//result.add(new NameValue("HypervisorHostName", hypName));
+									//log.info("Added field PowerState of type "+ServerExtendedAttributes.class+" with value "+instanceName);
+									//log.info("Added field TaskState of type "+ServerExtendedAttributes.class+" with value "+hostName);
+									//log.info("Added field VMState of type "+ServerExtendedAttributes.class+" with value "+hypName);
 								}
 							} catch(Exception e) {
-								log.log(Level.WARNING,method.getName()+" with return "+target.getCanonicalName(), e);
+								logger.warn(method.getName()+" with return "+target.getCanonicalName(), e);
 							}
 						}	
 					}else{
@@ -108,10 +110,10 @@ public class HPCloudExtractor {
 									String value = response.toString();
 									String name = lowerCaseStart(field);
 									result.add(new NameValue(name, value));
-									log.info("Added field "+name+" of type "+response.getClass().getName()+" with value "+value);
+									logger.info("Added field "+name+" of type "+response.getClass().getName()+" with value "+value);
 								}
 							} catch(Exception e) {
-								log.log(Level.WARNING,method.getName()+" with return "+target.getCanonicalName(), e);
+								logger.warn(method.getName()+" with return "+target.getCanonicalName(), e);
 							}
 							
 						}
@@ -153,26 +155,27 @@ public class HPCloudExtractor {
 				
 		Multimap<String,Address> multimap = (Multimap<String,Address>)response;
 		for (String access : multimap.keySet()) {
-			if(access.compareTo("public")==0){
+			//logger.info("multimap key access:" + access);
 				Collection<Address> addresses = multimap.get(access);
+				//logger.info("Collection size:" + addresses.size());
 				for (Iterator iter = addresses.iterator(); iter.hasNext();) {
 					   Address add = (Address) iter.next();
 					   address = (add.getAddr());
-					   return address;
-					}
-			}
+					   logger.info("address:" + address);
+					  
+					   }
 		}
 		
 		return address;
 	}
 	
 
-	private static String getInstanceName(Object response){
+	/*private static String getInstanceName(Object response){
 		Optional<ServerExtendedAttributes> sat = (Optional<ServerExtendedAttributes>)response;
-		ServerExtendedAttributes attributes = sat.get();
+	//	ServerExtendedAttributes attributes = sat.get();
 		
 		return attributes.getInstanceName();
-	}
+	}*/
 	
 	private static String getHostName(Object response){
 		Optional<ServerExtendedAttributes> sat = (Optional<ServerExtendedAttributes>)response;
