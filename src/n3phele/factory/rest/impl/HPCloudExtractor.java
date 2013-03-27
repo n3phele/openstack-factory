@@ -44,7 +44,7 @@ public class HPCloudExtractor {
 	 * @return list of extracted name/value pairs
 	 */
 	public static ArrayList<NameValue> extract(Server o) {
-		logger.info("Extracting output parameters");
+		//logger.info("Extracting output parameters");
 		ArrayList<NameValue> result = new ArrayList<NameValue>();
 		Method methods[] = o.getClass().getMethods();
 		for(Method method : methods) {

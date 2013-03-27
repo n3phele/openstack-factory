@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -69,6 +70,7 @@ import n3phele.service.model.core.ParameterType;
 import n3phele.service.model.core.TypedParameter;
 import n3phele.service.model.core.VirtualServer;
 
+import org.jclouds.openstack.nova.v2_0.domain.Address;
 import org.jclouds.openstack.nova.v2_0.domain.KeyPair;
 import org.jclouds.openstack.nova.v2_0.domain.RebootType;
 import org.jclouds.openstack.nova.v2_0.domain.SecurityGroup;
@@ -79,6 +81,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.apphosting.api.DeadlineExceededException;
+import com.google.common.collect.Multimap;
 import com.googlecode.objectify.Key;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
@@ -251,7 +254,6 @@ public class VirtualServerResource {
 					hpcRequest.userData = new String( Base64.decode(data) );
 				else
 					hpcRequest.userData = data;
-				logger.info("User Data: "+hpcRequest.userData);
 			}
 
 			if (p.getKey().equalsIgnoreCase("locationId"))
@@ -596,39 +598,23 @@ public class VirtualServerResource {
 				}else{
 					currentStatus = "terminated";
 				}
+				//FIXME: Updating all virtual machines due to the delay to retrieve the public IP
 				/**
 				 * If the statuses are different, and the current cloud status
 				 * is ACTIVE (Running), we should update.
 				 */
-				if (!item.getStatus().equalsIgnoreCase(currentStatus) && currentStatus.compareTo("running") == 0)  
-				{
+			//	if (!item.getStatus().equalsIgnoreCase(currentStatus) && currentStatus.compareTo("running") == 0)  
+				//{
 					Map<String, String> tags = new HashMap<String, String>();
 					tags.put("n3phele-name", item.getName());
 					tags.put("n3phele-factory", Resource.get("factoryName", FACTORY_NAME));
 					tags.put("n3phele-uri", item.getUri().toString());
 					s.getExtendedAttributes();
-					boolean gotPublicIP = false;
-					String privateIpAddress = "";
-					String publicIpAddress = "";
-					while(!gotPublicIP){
-						item.setOutputParameters(HPCloudExtractor.extract(s));		
-						
-						for(int i = 0; i < item.getOutputParameters().size(); i++){
-							if(item.getOutputParameters().get(i).getKey().equalsIgnoreCase("privateIpAddress")){
-								privateIpAddress = item.getOutputParameters().get(i).getValue();
-							}
-							
-							else if(item.getOutputParameters().get(i).getKey().equalsIgnoreCase("publicIpAddress")){
-								publicIpAddress = item.getOutputParameters().get(i).getValue();
-							}
-						}
-						
-						if(privateIpAddress.equalsIgnoreCase(publicIpAddress))gotPublicIP = false;
-						else gotPublicIP = true;
-						
-					}
+					item.setOutputParameters(HPCloudExtractor.extract(s));		
+				
+					
 					hpcManager.putServerTags(item.getInstanceId(), locationId, tags);
-				}
+			//	}
 
 				if (updateStatus(item, currentStatus, reference, sequence))
 					update(item);
