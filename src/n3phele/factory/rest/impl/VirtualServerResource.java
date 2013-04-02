@@ -603,19 +603,18 @@ public class VirtualServerResource {
 				 * If the statuses are different, and the current cloud status
 				 * is ACTIVE (Running), we should update.
 				 */
-			//	if (!item.getStatus().equalsIgnoreCase(currentStatus) && currentStatus.compareTo("running") == 0)  
-				//{
+				if (!item.getStatus().equalsIgnoreCase(currentStatus) && currentStatus.compareTo("running") == 0) 
+				{
 					Map<String, String> tags = new HashMap<String, String>();
 					tags.put("n3phele-name", item.getName());
 					tags.put("n3phele-factory", Resource.get("factoryName", FACTORY_NAME));
 					tags.put("n3phele-uri", item.getUri().toString());
-					s.getExtendedAttributes();
-					item.setOutputParameters(HPCloudExtractor.extract(s));		
-				
-					
 					hpcManager.putServerTags(item.getInstanceId(), locationId, tags);
-			//	}
-
+				}
+					
+				s.getExtendedAttributes();
+				item.setOutputParameters(HPCloudExtractor.extract(s));		
+				
 				if (updateStatus(item, currentStatus, reference, sequence))
 					update(item);
 
