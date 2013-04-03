@@ -389,7 +389,7 @@ public class VirtualServerResource {
 			HPCloudManager hpcManager = new HPCloudManager(credentials);
 			item.setInstanceId(null);
 			item.setZombie(true);
-			updateStatus(item, "Terminated");
+			updateStatus(item, "terminated");
 			update(item);
 
 			/**
@@ -443,7 +443,7 @@ public class VirtualServerResource {
 			HPCloudManager hpcManager = new HPCloudManager(credentials);
 			item.setInstanceId(null);
 			item.setZombie(true);
-			updateStatus(item, "Terminated");
+			updateStatus(item, "terminated");
 			update(item);
 
 			/**
@@ -490,12 +490,7 @@ public class VirtualServerResource {
 				result = false;
 			}
 			else
-			{
-				/*if (virtualServer.getSpotId() != null && virtualServer.getSpotId().length() != 0)
-				{
-					logger.info("Server is spot instance");
-					result = false;
-				}*/
+			{				
 				if (!virtualServer.getStatus().equalsIgnoreCase("running")) 
 				{
 					logger.info("Server is " + virtualServer.getStatus());
@@ -565,13 +560,8 @@ public class VirtualServerResource {
 			Server s = hpcManager.getServerById(locationId, item.getInstanceId());
 			if (s != null)
 			{
-				String currentStatus = "";
-				if(s.getStatus().toString().compareTo("ACTIVE")==0) currentStatus = "running";
-				else if(s.getStatus().toString().compareTo("BUILD")==0 || s.getStatus().toString().compareTo("REBUILD")==0 || s.getStatus().toString().compareTo("REBOOT")==0 || s.getStatus().toString().compareTo("HARD_REBOOT")==0){
-					currentStatus = "initializing";
-				}else{
-					currentStatus = "terminated";
-				}
+				String currentStatus = mapStatus(s);
+				
 				//FIXME: Updating all virtual machines due to the delay to retrieve the public IP
 				/**
 				 * If the statuses are different, and the current cloud status
@@ -611,6 +601,16 @@ public class VirtualServerResource {
 		}
 	}
 	
+	private String mapStatus(Server s){
+		
+		if(s.getStatus().toString().compareTo("ACTIVE")==0) return "running";
+		else if(s.getStatus().toString().compareTo("BUILD")==0 || s.getStatus().toString().compareTo("REBUILD")==0 || s.getStatus().toString().compareTo("REBOOT")==0 || s.getStatus().toString().compareTo("HARD_REBOOT")==0){
+			return "initializing";
+		}else{
+			return "terminated";
+		}
+	}
+	
 	private String getLocationId(VirtualServer item)
 	{
 		ArrayList<NameValue> listParameters = item.getParameters();
@@ -641,9 +641,8 @@ public class VirtualServerResource {
 		Server s = hpcManager.getServerById(locationId, item.getInstanceId());
 		if (s != null)
 		{
-			Status currentStatus = s.getStatus();
-			//TODO: create a mapping function to the virtual server staus or modify setStatus
-			item.setStatus(currentStatus.toString());
+			String currentStatus = mapStatus(s);
+			item.setStatus(currentStatus);
 		} else
 		{
 			logger.warn("Instance " + item.getInstanceId() + " not found, assumed terminated ..");
@@ -740,7 +739,7 @@ public class VirtualServerResource {
 		try
 		{
 			//TODO: Should we consider to use the Enums instead of hard coded string?
-			if (!item.getStatus().equalsIgnoreCase("Terminated") && instanceId != null && instanceId.length() > 0)
+			if (!item.getStatus().equalsIgnoreCase("terminated") && instanceId != null && instanceId.length() > 0)
 			{
 
 				HPCloudCredentials credentials = new HPCloudCredentials(item.getAccessKey(), item.getEncryptedKey());
@@ -759,7 +758,7 @@ public class VirtualServerResource {
 				if (result)
 				{
 					logger.warn("Instance " + item.getInstanceId() + "deleted");
-					if (updateStatus(item, "Terminated"))
+					if (updateStatus(item, "terminated"))
 						update(item);
 					
 				} else
@@ -769,7 +768,7 @@ public class VirtualServerResource {
 			}
 			else
 			{
-				if (updateStatus(item, "Terminated"))
+				if (updateStatus(item, "terminated"))
 					update(item);
 			}
 
