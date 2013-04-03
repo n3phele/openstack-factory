@@ -7,24 +7,24 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement
 public class HPCloudCreateServerRequest {
-	public String	hardwareId;
-	public String	imageId;
+	public String	flavorRef;
+	public String	imageRef;
 	public String	locationId;
 	public String	keyName;
 	public String	serverName;
-	public String	userData;
+	public String	user_data;
 
-	public String	securityGroup;
+	public String	security_groups;
 
 	public int		nodeCount;
 
-	public HPCloudCreateServerRequest(String serverName, String hardwareId, String imageId, String locationId, String securityGroup, String keyPair, int nodeCount)
+	public HPCloudCreateServerRequest(String serverName, String flavorRef, String imageRef, String locationId, String security_groups, String keyPair, int nodeCount)
 	{
 		this.serverName = serverName;
-		this.hardwareId = hardwareId;
-		this.imageId = imageId;
+		this.flavorRef = flavorRef;
+		this.imageRef = imageRef;
 		this.locationId = locationId;
-		this.securityGroup = securityGroup;
+		this.security_groups = security_groups;
 		this.keyName = keyPair;
 		this.nodeCount = nodeCount;
 	}

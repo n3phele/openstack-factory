@@ -205,7 +205,7 @@ public class HPCloudManager {
 		 * Create our security group with following ports opened: TCP: 22, 8887
 		 * UDP: None ICMP: Yes
 		 */
-		SecurityGroup secGroup = createSecurityGroup(r.securityGroup, r.locationId);
+		SecurityGroup secGroup = createSecurityGroup(r.security_groups, r.locationId);
 		
 		/**
 		 * Create our keypair. Return existent keypair if already exists.
@@ -222,8 +222,8 @@ public class HPCloudManager {
 		/**
 		 * Custom commands
 		 */
-		if( r.userData.length() > 0 )
-			options.userData(r.userData.getBytes());
+		if( r.user_data.length() > 0 )
+			options.userData(r.user_data.getBytes());
 		
 		/**
 		 * Append n3phele prefix
@@ -246,7 +246,7 @@ public class HPCloudManager {
 			if( r.nodeCount > 1 )
 				name = name.concat("-" + String.valueOf(i));
 			
-			ServerCreated server = serverApi.create(name, r.imageId, r.hardwareId, options);
+			ServerCreated server = serverApi.create(name, r.imageRef, r.flavorRef, options);
 			serversList.add(server);
 		}
 

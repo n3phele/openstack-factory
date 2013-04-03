@@ -3,7 +3,7 @@
  * @author Alexandre Leites
  * @author Cristina Scheibler
  *
- * (C) Copyright 2010-2012. Nigel Cook. All rights reserved.
+ * (C) Copyright 2010-2013. Nigel Cook. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  * 
  * Licensed under the terms described in LICENSE file that accompanied this code, (the "License"); you may not use this file
@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -53,7 +52,6 @@ import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 
 import n3phele.factory.hpcloud.HPCloudCreateServerRequest;
-import n3phele.factory.hpcloud.HPCloudCreateServerResponse;
 import n3phele.factory.hpcloud.HPCloudCredentials;
 import n3phele.factory.hpcloud.HPCloudManager;
 import n3phele.factory.model.ServiceModelDao;
@@ -70,7 +68,6 @@ import n3phele.service.model.core.ParameterType;
 import n3phele.service.model.core.TypedParameter;
 import n3phele.service.model.core.VirtualServer;
 
-import org.jclouds.openstack.nova.v2_0.domain.Address;
 import org.jclouds.openstack.nova.v2_0.domain.KeyPair;
 import org.jclouds.openstack.nova.v2_0.domain.RebootType;
 import org.jclouds.openstack.nova.v2_0.domain.SecurityGroup;
@@ -81,7 +78,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.apphosting.api.DeadlineExceededException;
-import com.google.common.collect.Multimap;
 import com.googlecode.objectify.Key;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
@@ -97,39 +93,23 @@ import com.sun.jersey.core.util.Base64;
 @Path("/")
 public class VirtualServerResource {
 	private Client						client	= null;
-	private final VirtualServerManager	manager;
+	private final static VirtualServerManager	manager = new VirtualServerManager();
 	
 	private final static String FACTORY_NAME	= "nova-factory";
 	final Logger logger = LoggerFactory.getLogger(VirtualServerResource.class);
 
 	public VirtualServerResource()
 	{
-		manager = new VirtualServerManager();
 	}
 
 	@Context
 	UriInfo uriInfo;
 	
-	@GET
-	@RolesAllowed("authenticated")
-	@Path("dump")
-	public String dump(@QueryParam("id") String id, @QueryParam("key") String key, @DefaultValue("https://ec2.amazonaws.com") @QueryParam("location") String location, @QueryParam("locationId") String locationId)
-	{
-		HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(id, key));
-		int count = hpcManager.getKeyPairsCount(locationId);
-
-		if (count > 1)
-			return String.valueOf(count) + " key pairs";
-		else
-			return null;
-	}
-
-	
 	@POST
 	@Produces("application/json")
 	@RolesAllowed("authenticated")
 	@Path("virtualServer/accountTest")
-	public String accountTest(@DefaultValue("false") @FormParam("fix") Boolean fix, @FormParam("id") String id, @FormParam("secret") String secret, @FormParam("key") String key, @FormParam("location") URI location, @FormParam("locationId") String locationId, @FormParam("email") String email, @FormParam("firstName") String firstName, @FormParam("lastName") String lastName, @FormParam("securityGroup") String securityGroup)
+	public String accountTest(@DefaultValue("false") @FormParam("fix") Boolean fix, @FormParam("id") String id, @FormParam("secret") String secret, @FormParam("key") String key, @FormParam("location") URI location, @FormParam("locationId") String locationId, @FormParam("email") String email, @FormParam("firstName") String firstName, @FormParam("lastName") String lastName, @FormParam("securityGroup") String security_groups)
 	{
 		logger.info("accountTest with fix " + fix);
 		if (fix && (email == null || email.trim().length() == 0) || (firstName == null || firstName.trim().length() == 0) || (lastName == null || lastName.trim().length() == 0))
@@ -139,16 +119,16 @@ public class VirtualServerResource {
 		if (!resultKey && fix)
 			resultKey = createKey(key, id, secret, location, email, firstName, lastName, locationId);
 		
-		boolean result = checkSecurityGroup(securityGroup, id, secret, location, locationId);
+		boolean result = checkSecurityGroup(security_groups, id, secret, location, locationId);
 		if (!result && fix)
-			result = makeSecurityGroup(securityGroup, id, secret, location, email, firstName, lastName, locationId);
+			result = makeSecurityGroup(security_groups, id, secret, location, email, firstName, lastName, locationId);
 
 		String reply = "";
 		if (!resultKey)
 			reply = "KeyPair " + key + " does not exist"
 					+ (fix ? " and could not be created.\n" : "\n");
 		if (!result)
-			reply = "Security group " + securityGroup + " does not exist"
+			reply = "Security group " + security_groups + " does not exist"
 					+ (fix ? " and could not be created.\n" : "\n");
 		return reply;
 	}
@@ -230,38 +210,38 @@ public class VirtualServerResource {
 						nodeCount = 1;
 				} catch (Exception e){}
 			}
-
-			if (p.getKey().equalsIgnoreCase("imageId"))
+			
+			if (p.getKey().equalsIgnoreCase("imageRef"))
 			{
-				hpcRequest.imageId = p.getValue();
+				hpcRequest.imageRef = p.getValue();
 			}
 
-			if (p.getKey().equalsIgnoreCase("instanceType"))
+			if (p.getKey().equalsIgnoreCase("flavorRef"))
 			{
-				hpcRequest.hardwareId = p.getValue();
+				hpcRequest.flavorRef = p.getValue();
+			}
+			
+			if (p.getKey().equalsIgnoreCase("security_groups"))
+			{
+				hpcRequest.security_groups = p.getValue();
 			}
 
-			if (p.getKey().equalsIgnoreCase("securityGroup"))
-			{
-				hpcRequest.securityGroup = p.getValue();
-			}
-
-			if (p.getKey().equalsIgnoreCase("userData"))
+			if (p.getKey().equalsIgnoreCase("user_data"))
 			{
 				//FIXME: Openstack just accept userData as a plain text.
 				String data = p.getValue();
 				if( Base64.isBase64(data) )
-					hpcRequest.userData = new String( Base64.decode(data) );
+					hpcRequest.user_data = new String( Base64.decode(data) );
 				else
-					hpcRequest.userData = data;
+					hpcRequest.user_data = data;
 			}
-
+			
 			if (p.getKey().equalsIgnoreCase("locationId"))
 			{
 				hpcRequest.locationId = p.getValue();
 			}
 			
-			if (p.getKey().equalsIgnoreCase("keyName"))
+			if (p.getKey().equalsIgnoreCase("key_name"))
 			{
 				hpcRequest.keyName = p.getValue();
 			}
@@ -288,7 +268,6 @@ public class VirtualServerResource {
 		
 		for(VirtualServer s : vsList)
 		{
-			//uriList.add(s.getUri());
 			siblings.add(s.getUri().toString());
 		}
 		
@@ -369,8 +348,7 @@ public class VirtualServerResource {
 	 * @param error true that the server needs to be terminated, false it is a candidate for reuse
 	 */
 	protected void terminate(VirtualServer virtualServer)
-	{
-		;
+	{		
 		try
 		{
 			deleteInstance(virtualServer, UUID.randomUUID(), 0);
@@ -385,8 +363,7 @@ public class VirtualServerResource {
 	 * @param stop true only stop the server, false terminate the server
 	 */
 	protected void softKill(VirtualServer virtualServer, boolean error)
-	{
-		;
+	{		
 		try
 		{
 			if (!isZombieCandidate(virtualServer))
@@ -515,12 +492,12 @@ public class VirtualServerResource {
 			}
 			else
 			{
-				if (virtualServer.getSpotId() != null && virtualServer.getSpotId().length() != 0)
+				/*if (virtualServer.getSpotId() != null && virtualServer.getSpotId().length() != 0)
 				{
 					logger.info("Server is spot instance");
 					result = false;
-				}
-				else if (!virtualServer.getStatus().equalsIgnoreCase("running")) 
+				}*/
+				if (!virtualServer.getStatus().equalsIgnoreCase("running")) 
 				{
 					logger.info("Server is " + virtualServer.getStatus());
 					result = false;
@@ -565,6 +542,7 @@ public class VirtualServerResource {
 	 * @param sequence notification sequence number
 	 */
 
+	//TODO: remove reference and sequence
 	protected void updateVirtualServer(VirtualServer item, UUID reference, int sequence) throws IllegalArgumentException
 		
 	{			
@@ -592,8 +570,8 @@ public class VirtualServerResource {
 			if (s != null)
 			{
 				String currentStatus = "";
-				if(s.getStatus().toString().compareTo("BUILD")==0 ||s.getStatus().toString().compareTo("ACTIVE")==0) currentStatus = "running";
-				else if( s.getStatus().toString().compareTo("REBUILD")==0 || s.getStatus().toString().compareTo("REBOOT")==0 || s.getStatus().toString().compareTo("HARD_REBOOT")==0){
+				if(s.getStatus().toString().compareTo("ACTIVE")==0) currentStatus = "running";
+				else if(s.getStatus().toString().compareTo("BUILD")==0 || s.getStatus().toString().compareTo("REBUILD")==0 || s.getStatus().toString().compareTo("REBOOT")==0 || s.getStatus().toString().compareTo("HARD_REBOOT")==0){
 					currentStatus = "initializing";
 				}else{
 					currentStatus = "terminated";
@@ -612,9 +590,12 @@ public class VirtualServerResource {
 					hpcManager.putServerTags(item.getInstanceId(), locationId, tags);
 				}
 					
-				s.getExtendedAttributes();
+				//TODO: check if necessary
+				/*s.getExtendedAttributes();*/
+				
 				item.setOutputParameters(HPCloudExtractor.extract(s));		
 				
+				//TODO: only update to running if the public ip adrress is set
 				if (updateStatus(item, currentStatus, reference, sequence))
 					update(item);
 
@@ -665,6 +646,7 @@ public class VirtualServerResource {
 		if (s != null)
 		{
 			Status currentStatus = s.getStatus();
+			//TODO: create a mapping function to the virtual server staus or modify setStatus
 			item.setStatus(currentStatus.toString());
 		} else
 		{
@@ -805,6 +787,7 @@ public class VirtualServerResource {
 
 	}
 	
+	//TODO: check where it should be called
 	private boolean createWithZombie(VirtualServer item)
 	{
 		List<VirtualServer> zombies = getZombie();
@@ -835,6 +818,7 @@ public class VirtualServerResource {
 					boolean claimed = false;
 					try
 					{
+						//TODO: update to new objectify version (see n3phele.service.lifecycle line 115)
 						itemDaoTxn = manager.itemDaoFactory(true);
 						VirtualServer zombie = itemDaoTxn.get(s.getId());
 						zombie.setIdempotencyKey(new Date().toString());
@@ -895,6 +879,7 @@ public class VirtualServerResource {
 		return (a.equals(b));
 	}
 
+	//TODO: remove reference and sequence
 	protected boolean updateStatus(VirtualServer s, String newStatus, UUID reference, int sequence)
 	{
 		String oldStatus = s.getStatus();
@@ -920,6 +905,7 @@ public class VirtualServerResource {
 		return true;
 	}
 
+	//TODO: remove reference and sequence
 	private void sendNotification(VirtualServer s, String oldStatus, String newStatus, String reference, int sequence) throws Exception
 	{
 		URI notification = s.getNotification();
@@ -1167,16 +1153,17 @@ public class VirtualServerResource {
 	public List<VirtualServer> getByIdempotencyKey(String key) { return manager.itemDao().ofy().query(VirtualServer.class).filter("idempotencyKey", key).list(); }
 	
 	public List<VirtualServer> getZombie() { return manager.itemDao().ofy().query(VirtualServer.class).filter("name", "zombie").list(); }
-
+	
 	public final static TypedParameter inputParameters[] =  {
-		new TypedParameter("instanceType", "Specifies the virtual machine size. Valid Values: 100 (standard.xsmall), 101 (standard.small), 102 (standard.medium), 103 (standard.large), 104 (standard.xlarge), 105 (standard.2xlarge)", ParameterType.String,"", "100"),
-		new TypedParameter("imageId", "Unique ID of a machine image, returned by a call to RegisterImage", ParameterType.String, "", "75845"),
-		new TypedParameter("keyName", "Name of the SSH key  to be used for communication with the VM", ParameterType.String, "", "hpdefault"),
+		new TypedParameter("flavorRef", "Specifies the virtual machine size. Valid Values: 100 (standard.xsmall), 101 (standard.small), 102 (standard.medium), 103 (standard.large), 104 (standard.xlarge), 105 (standard.2xlarge)", ParameterType.String,"", "100"),
+		new TypedParameter("imageRef", "Unique ID of a machine image, returned by a call to RegisterImage", ParameterType.String, "", "75845"),
+		new TypedParameter("key_name", "Name of the SSH key  to be used for communication with the VM", ParameterType.String, "", "hpdefault"),
 		new TypedParameter("nodeCount", "Number of instances to launch.", ParameterType.Long, "", "1"),
 		new TypedParameter("locationId", "Unique ID of hpcloud zone. Valid Values: az-1.region-a.geo-1 | az-2.region-a.geo-1 | az-3.region-a.geo-1", ParameterType.String, null, "az-1.region-a.geo-1"),
-		new TypedParameter("securityGroup", "Name of the security group which controls the open TCP/IP ports for the VM.", ParameterType.String, "", "default"),
-		new TypedParameter("userData", "Base64-encoded MIME user data made available to the instance(s). May be used to pass startup commands.", ParameterType.String, "value", "#!/bin/bash\necho n3phele agent injection... \nset -x\n wget -q -O - https://n3phele-agent.s3.amazonaws.com/n3ph-install-tgz-basic | su - -c '/bin/bash -s ec2-user ~/agent ~/sandbox' ec2-user\n")
+		new TypedParameter("security_groups", "Name of the security group which controls the open TCP/IP ports for the VM.", ParameterType.String, "", "default"),
+		new TypedParameter("user_data", "Base64-encoded MIME user data made available to the instance(s). May be used to pass startup commands.", ParameterType.String, "value", "#!/bin/bash\necho n3phele agent injection... \nset -x\n wget -q -O - https://n3phele-agent.s3.amazonaws.com/n3ph-install-tgz-basic | su - -c '/bin/bash -s ec2-user ~/agent ~/sandbox' ec2-user\n")
 	};
+	
 	
 	public final static TypedParameter outputParameters[] =  {		
 		new TypedParameter("AccessIPv4", "IPv4 public server address", ParameterType.String, "", ""),
