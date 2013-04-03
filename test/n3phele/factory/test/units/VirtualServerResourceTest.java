@@ -175,7 +175,7 @@ public class VirtualServerResourceTest {
 		VirtualServerResource resource = new VirtualServerResource() {
 			//Do nothing when trying to update reference throw remote call
 			@Override
-			protected void updateVirtualServer(VirtualServer item, UUID reference, int sequence) throws IllegalArgumentException
+			protected void updateVirtualServer(VirtualServer item) throws IllegalArgumentException
 			{
 				
 			}			
@@ -204,7 +204,7 @@ public class VirtualServerResourceTest {
 		VirtualServerResource resource = new VirtualServerResource() {
 			//Do nothing when trying to update reference throw remote call
 			@Override
-			protected void updateVirtualServer(VirtualServer item, UUID reference, int sequence) throws IllegalArgumentException
+			protected void updateVirtualServer(VirtualServer item) throws IllegalArgumentException
 			{
 				
 			}

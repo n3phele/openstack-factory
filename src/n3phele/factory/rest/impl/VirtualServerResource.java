@@ -25,7 +25,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.UUID;
 
 import javax.annotation.security.RolesAllowed;
 import javax.mail.Message;
@@ -351,7 +350,7 @@ public class VirtualServerResource {
 	{		
 		try
 		{
-			deleteInstance(virtualServer, UUID.randomUUID(), 0);
+			deleteInstance(virtualServer);
 		} catch (Exception e)
 		{
 			manager.delete(virtualServer);
@@ -367,13 +366,13 @@ public class VirtualServerResource {
 		try
 		{
 			if (!isZombieCandidate(virtualServer))
-				deleteInstance(virtualServer, UUID.randomUUID(), 0);
+				deleteInstance(virtualServer);
 			else
 			{
 				if (error)
-					makeDebug(virtualServer, UUID.randomUUID(), 0);
+					makeDebug(virtualServer);
 				else
-					makeZombie(virtualServer, UUID.randomUUID(), 0);
+					makeZombie(virtualServer);
 			}
 		} catch (Exception e)
 		{
@@ -381,7 +380,7 @@ public class VirtualServerResource {
 		}
 	}
 	
-	private void makeZombie(VirtualServer item, UUID reference, int sequence) throws Exception
+	private void makeZombie(VirtualServer item) throws Exception
 	{
 		String instanceId = item.getInstanceId();
 		try
@@ -390,7 +389,7 @@ public class VirtualServerResource {
 			HPCloudManager hpcManager = new HPCloudManager(credentials);
 			item.setInstanceId(null);
 			item.setZombie(true);
-			updateStatus(item, "Terminated", reference, sequence);
+			updateStatus(item, "Terminated");
 			update(item);
 
 			/**
@@ -429,13 +428,13 @@ public class VirtualServerResource {
 		} catch (Exception e)
 		{
 			logger.error("makeZombie delete of instanceId " + instanceId, e);
-			deleteInstance(item, UUID.randomUUID(), 0);
+			deleteInstance(item);
 			throw e;
 		}
 
 	}
 	
-	private void makeDebug(VirtualServer item, UUID reference, int sequence) throws Exception
+	private void makeDebug(VirtualServer item) throws Exception
 	{
 		String instanceId = item.getInstanceId();
 		try
@@ -444,7 +443,7 @@ public class VirtualServerResource {
 			HPCloudManager hpcManager = new HPCloudManager(credentials);
 			item.setInstanceId(null);
 			item.setZombie(true);
-			updateStatus(item, "Terminated", reference, sequence);
+			updateStatus(item, "Terminated");
 			update(item);
 
 			/**
@@ -472,7 +471,7 @@ public class VirtualServerResource {
 		{
 			logger.error("makeDebug delete of instanceId "	+ instanceId, e);
 			item.setInstanceId(instanceId);
-			deleteInstance(item, UUID.randomUUID(), 0);
+			deleteInstance(item);
 			throw e;
 		}
 	}
@@ -532,18 +531,15 @@ public class VirtualServerResource {
 	{
 		VirtualServer s = load(id);
 		logger.info("Virtual Server retrieved: "+s.getInstanceId());
-		updateVirtualServer(s, UUID.randomUUID(), 0);
+		updateVirtualServer(s);
 		return s;
 	}
 	
 	/** Updates virtual server object and data store state
 	 * @param item object to update
-	 * @param reference reference UUID used for notifications
-	 * @param sequence notification sequence number
 	 */
 
-	//TODO: remove reference and sequence
-	protected void updateVirtualServer(VirtualServer item, UUID reference, int sequence) throws IllegalArgumentException
+	protected void updateVirtualServer(VirtualServer item) throws IllegalArgumentException
 		
 	{			
 		HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(item.getAccessKey(), item.getEncryptedKey()));
@@ -553,7 +549,7 @@ public class VirtualServerResource {
 		if (madeIntoZombie)
 		{
 			//TODO: Should we consider to use the Enums instead of hard coded string?
-			if (updateStatus(item, "terminated", reference, sequence))
+			if (updateStatus(item, "terminated"))
 				update(item);
 			
 			if (item.getStatus().equals("terminated"))
@@ -596,7 +592,7 @@ public class VirtualServerResource {
 				item.setOutputParameters(HPCloudExtractor.extract(s));		
 				
 				//TODO: only update to running if the public ip adrress is set
-				if (updateStatus(item, currentStatus, reference, sequence))
+				if (updateStatus(item, currentStatus))
 					update(item);
 
 				//TODO: Should we consider to use the Enums instead of hard coded string?
@@ -710,14 +706,12 @@ public class VirtualServerResource {
 	{
 		Collection<VirtualServer> servers = getCollection();
 		Collection<BaseEntity> result = servers.collection(true);
-		UUID reference = UUID.randomUUID();
-		int sequence = 0;
 		try {
 			for (VirtualServer s : servers.getElements()) {
 	
 					try {
 						if(s.getUri() != null && !checkForZombieExpiry(s))
-							updateVirtualServer(s, reference, sequence++);
+							updateVirtualServer(s);
 					} 
 					//TODO implement this using jcloud
 					/*catch (AmazonClientException ignore) {
@@ -740,7 +734,7 @@ public class VirtualServerResource {
 		return result;
 	}
 
-	private void deleteInstance(VirtualServer item, UUID reference, int sequence) throws Exception
+	private void deleteInstance(VirtualServer item) throws Exception
 	{
 		String instanceId = item.getInstanceId();
 		try
@@ -765,7 +759,7 @@ public class VirtualServerResource {
 				if (result)
 				{
 					logger.warn("Instance " + item.getInstanceId() + "deleted");
-					if (updateStatus(item, "Terminated", reference, sequence))
+					if (updateStatus(item, "Terminated"))
 						update(item);
 					
 				} else
@@ -775,7 +769,7 @@ public class VirtualServerResource {
 			}
 			else
 			{
-				if (updateStatus(item, "Terminated", reference, sequence))
+				if (updateStatus(item, "Terminated"))
 					update(item);
 			}
 
@@ -852,7 +846,7 @@ public class VirtualServerResource {
 						}
 						item.setInstanceId(s.getInstanceId());
 						item.setCreated(s.getCreated());
-						updateVirtualServer(item, UUID.randomUUID(), 0);
+						updateVirtualServer(item);
 						
 						if( item.getStatus().equalsIgnoreCase("running") )
 							return true;
@@ -878,9 +872,8 @@ public class VirtualServerResource {
 			return false;
 		return (a.equals(b));
 	}
-
-	//TODO: remove reference and sequence
-	protected boolean updateStatus(VirtualServer s, String newStatus, UUID reference, int sequence)
+	
+	protected boolean updateStatus(VirtualServer s, String newStatus)
 	{
 		String oldStatus = s.getStatus();
 		newStatus = newStatus.toLowerCase();
@@ -889,7 +882,7 @@ public class VirtualServerResource {
 		s.setStatus(newStatus);
 		try
 		{
-			sendNotification(s, oldStatus.toLowerCase(), newStatus, reference.toString(), sequence);
+			sendNotification(s, oldStatus.toLowerCase(), newStatus);
 		} catch (Exception e)
 		{
 			logger.info("SendNotification exception to <" + s.getNotification() + "> from " + s.getUri() + " old: " + oldStatus + " new: " + s.getStatus(), e);
@@ -905,8 +898,8 @@ public class VirtualServerResource {
 		return true;
 	}
 
-	//TODO: remove reference and sequence
-	private void sendNotification(VirtualServer s, String oldStatus, String newStatus, String reference, int sequence) throws Exception
+	
+	private void sendNotification(VirtualServer s, String oldStatus, String newStatus) throws Exception
 	{
 		URI notification = s.getNotification();
 		logger.info("SendNotification to <" + notification + "> from " + s.getUri() + " old: " + oldStatus + " new: " + s.getStatus());
@@ -920,13 +913,13 @@ public class VirtualServerResource {
 		}
 		WebResource resource = client.resource(s.getNotification());
 
-		ClientResponse response = resource.queryParam("source", s.getUri().toString()).queryParam("oldStatus", oldStatus).queryParam("newStatus", newStatus).queryParam("reference", reference).queryParam("sequence", Integer.toString(sequence)).type(MediaType.TEXT_PLAIN).get(ClientResponse.class);
+		ClientResponse response = resource.queryParam("source", s.getUri().toString()).queryParam("oldStatus", oldStatus).queryParam("newStatus", newStatus).type(MediaType.TEXT_PLAIN).get(ClientResponse.class);
 		logger.info("Notificaion status " + response.getStatus());
 		if (response.getStatus() == 410)
 		{
 			logger.info("VM GONE .. killing " + s.getUri() + " silencing reporting to " + s.getNotification());
 			s.setNotification(null);
-			deleteInstance(s, UUID.randomUUID(), 0);
+			deleteInstance(s);
 		}
 	}
 
