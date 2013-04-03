@@ -221,7 +221,6 @@ public class VirtualServerResource {
 
 			if (p.getKey().equalsIgnoreCase("user_data"))
 			{
-				//FIXME: Openstack just accept userData as a plain text.
 				String data = p.getValue();
 				if( Base64.isBase64(data) )
 					hpcRequest.user_data = new String( Base64.decode(data) );
@@ -242,21 +241,44 @@ public class VirtualServerResource {
 
 		hpcRequest.nodeCount = nodeCount;
 		hpcRequest.serverName = r.name;
-
-		List<ServerCreated> resultList = hpcManager.createServerRequest(hpcRequest);
-		List<URI> vmRefs = new ArrayList<URI>(resultList.size());
-		ArrayList<String> siblings = new ArrayList<String>(resultList.size());
-		ArrayList<VirtualServer> vsList = new ArrayList<VirtualServer>(resultList.size());
-		Date epoch = new Date();
-		for (ServerCreated srv : resultList)
+		
+		/**
+		 * We're creating a temporary VirtualServer item to call createWithZombie method if we're creating just one machine.
+		 * If zombie is created with success, they'll just initialize the ArrayLists.
+		 */
+		Date epoch 						= new Date();
+		List<URI> vmRefs 				= null;
+		ArrayList<String> siblings 		= null;
+		ArrayList<VirtualServer> vsList = null;
+		VirtualServer temp 				= new VirtualServer(r.name, r.description, r.location, r.parameters, r.notification, r.accessKey, r.encryptedSecret, r.owner, r.idempotencyKey);
+		
+		if( nodeCount == 1 && createWithZombie(temp) )
 		{
-			VirtualServer item = new VirtualServer(srv.getName(), r.description, r.location, r.parameters, r.notification, r.accessKey, r.encryptedSecret, r.owner, r.idempotencyKey);
-			item.setCreated(epoch);
-			item.setInstanceId(srv.getId());
-			add(item);
-			logger.info("Created new VirtualServer: "+item.getUri());
-			vsList.add(item);	
-			vmRefs.add(item.getUri());
+			vmRefs 		= new ArrayList<URI>(1);
+			siblings 	= new ArrayList<String>(1);
+			vsList 		= new ArrayList<VirtualServer>(1);
+			
+			vsList.add(temp);
+			vmRefs.add(temp.getUri());
+		}
+		else
+		{
+			List<ServerCreated> resultList = hpcManager.createServerRequest(hpcRequest);
+			
+			vmRefs 		= new ArrayList<URI>(resultList.size());
+			siblings 	= new ArrayList<String>(resultList.size());
+			vsList 		= new ArrayList<VirtualServer>(resultList.size());
+			
+			for (ServerCreated srv : resultList)
+			{
+				VirtualServer item = new VirtualServer(srv.getName(), r.description, r.location, r.parameters, r.notification, r.accessKey, r.encryptedSecret, r.owner, r.idempotencyKey);
+				item.setCreated(epoch);
+				item.setInstanceId(srv.getId());
+				add(item);
+				logger.info("Created new VirtualServer: "+item.getUri());
+				vsList.add(item);
+				vmRefs.add(item.getUri());
+			}
 		}
 		
 		for(VirtualServer s : vsList)
@@ -650,8 +672,12 @@ public class VirtualServerResource {
 	 */
 	private boolean checkForZombieExpiry(VirtualServer s)
 	{
-		boolean debugInstance = false;
-		boolean zombieInstance = false;
+		/**
+		 * Double-checking if the VirtualServer is a zombie/debug machine.
+		 * We're checking the hpcloud tags AND the database name.
+		 */
+		boolean debugInstance = s.getName().equalsIgnoreCase("debug");
+		boolean zombieInstance = s.getName().equalsIgnoreCase("zombie");
 		ArrayList<NameValue> listParameters = s.getParameters();
 		
 		for(NameValue p : listParameters)
@@ -705,11 +731,7 @@ public class VirtualServerResource {
 					try {
 						if(s.getUri() != null && !checkForZombieExpiry(s))
 							updateVirtualServer(s);
-					} 
-					//TODO implement this using jcloud
-					/*catch (AmazonClientException ignore) {
-						log.log(Level.WARNING, s.getUri()+" refresh failed. ignoring..",ignore);
-					}*/
+					}
 					catch (Exception e) {
 						logger.warn(s.getUri()+" refresh failed. Killing..",e);
 						try {
@@ -774,7 +796,6 @@ public class VirtualServerResource {
 
 	}
 	
-	//TODO: check where it should be called
 	private boolean createWithZombie(VirtualServer item)
 	{
 		List<VirtualServer> zombies = getZombie();
