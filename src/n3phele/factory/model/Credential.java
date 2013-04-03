@@ -1,5 +1,3 @@
-package n3phele.factory.model;
-
 /**
  * (C) Copyright 2010-2013. Nigel Cook. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
@@ -11,6 +9,7 @@ package n3phele.factory.model;
  *  an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the 
  *  specific language governing permissions and limitations under the License.
  */
+package n3phele.factory.model;
 
 import java.io.UnsupportedEncodingException;
 import java.security.InvalidKeyException;
@@ -34,7 +33,10 @@ import com.sun.jersey.core.util.Base64;
 
 // FiXME way way way way too many methods too similarly named
 
-
+/**
+ * @author Nigel Cook
+ * 
+ */
 @XmlRootElement(name = "Credential")
 @XmlType(name = "Credential", propOrder = { "account", "secret" })
 public class Credential {

@@ -1,8 +1,4 @@
-/**
- * @author Nigel Cook
- * @author Alexandre Leites
- * @author Cristina Scheibler
- *
+ /**
  * (C) Copyright 2010-2013. Nigel Cook. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  * 
@@ -13,8 +9,7 @@
  *  an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the 
  *  specific language governing permissions and limitations under the License.
  */
- 
- package n3phele.factory.rest.impl;
+package n3phele.factory.rest.impl;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -71,7 +66,6 @@ import org.jclouds.openstack.nova.v2_0.domain.KeyPair;
 import org.jclouds.openstack.nova.v2_0.domain.RebootType;
 import org.jclouds.openstack.nova.v2_0.domain.SecurityGroup;
 import org.jclouds.openstack.nova.v2_0.domain.Server;
-import org.jclouds.openstack.nova.v2_0.domain.Server.Status;
 import org.jclouds.openstack.nova.v2_0.domain.ServerCreated;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,8 +80,8 @@ import com.sun.jersey.core.util.Base64;
 
 /** EC2 Virtual Server Resource manages the lifecycle of virtual machines on Amazon EC2 (or compatible) clouds.
  * @author Nigel Cook
- * @author Alexandre Leites
  * @author Cristina Scheibler
+ * @author Alexandre Leites
  */
 @Path("/")
 public class VirtualServerResource {

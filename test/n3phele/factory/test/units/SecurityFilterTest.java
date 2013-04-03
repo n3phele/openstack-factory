@@ -1,13 +1,10 @@
 package n3phele.factory.test.units;
 
-import static org.junit.Assert.*;
-
 import javax.ws.rs.core.SecurityContext;
 
 import static org.mockito.Mockito.*;
 
 import n3phele.factory.rest.impl.BasicSecurityFilter;
-import n3phele.service.core.AuthenticationException;
 import n3phele.service.core.Resource;
 
 import org.junit.After;

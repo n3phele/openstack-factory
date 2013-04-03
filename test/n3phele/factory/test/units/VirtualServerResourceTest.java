@@ -6,7 +6,6 @@ import static org.junit.Assert.fail;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.UUID;
 
 import javax.ws.rs.core.UriBuilder;
 

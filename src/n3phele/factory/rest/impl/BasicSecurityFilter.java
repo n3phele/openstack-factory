@@ -1,7 +1,5 @@
 /**
- * @author Nigel Cook
- *
- * (C) Copyright 2010-2012. Nigel Cook. All rights reserved.
+ *(C) Copyright 2010-2012. Nigel Cook. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  * 
  * Licensed under the terms described in LICENSE file that accompanied this code, (the "License"); you may not use this file
@@ -31,7 +29,9 @@ import com.sun.jersey.api.container.MappableContainerException;
 import com.sun.jersey.core.util.Base64;
 import com.sun.jersey.spi.container.ContainerRequest;
 import com.sun.jersey.spi.container.ContainerRequestFilter;
-
+/**
+ * @author Nigel Cook
+ */
 public class BasicSecurityFilter implements ContainerRequestFilter {
 	private static Logger log = Logger.getLogger(BasicSecurityFilter.class.getName()); 
     @Context UriInfo uriInfo;

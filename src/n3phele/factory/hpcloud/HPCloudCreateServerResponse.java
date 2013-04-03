@@ -1,6 +1,3 @@
-/**
- * @author Alexandre Leites
- */
 package n3phele.factory.hpcloud;
 
 import java.net.URI;
@@ -8,6 +5,9 @@ import java.util.List;
 
 import javax.xml.bind.annotation.XmlRootElement;
 
+/**
+ * @author Alexandre Leites
+ */
 @XmlRootElement
 public class HPCloudCreateServerResponse {
 	public URI servers[];

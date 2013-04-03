@@ -1,6 +1,3 @@
-/**
- * @author Alexandre Leites
- */
 package n3phele.factory.hpcloud;
 
 import static org.jclouds.compute.config.ComputeServiceProperties.TIMEOUT_SCRIPT_COMPLETE;

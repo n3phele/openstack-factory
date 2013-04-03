@@ -1,6 +1,3 @@
-/**
- * @author Alexandre Leites
- */
 package n3phele.factory.hpcloud;
 
 import javax.xml.bind.annotation.XmlRootElement;
@@ -8,7 +5,9 @@ import javax.xml.bind.annotation.XmlRootElement;
 import n3phele.security.EncryptedHPCredentials;
 import n3phele.service.core.Resource;
 
-
+/**
+ * @author Alexandre Leites
+ */
 @XmlRootElement
 public class HPCloudCredentials {
 	/**

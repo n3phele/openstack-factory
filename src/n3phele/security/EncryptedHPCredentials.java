@@ -1,8 +1,4 @@
 /**
- * @author Nigel Cook
- * @author Alexandre Leites
- * @author Cristina Scheibler
- *
  * (C) Copyright 2010-2012. Nigel Cook. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  * 
@@ -31,8 +27,12 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.SecretKeySpec;
 
 import com.sun.jersey.core.util.Base64;
-//import com.amazonaws.auth.AWSCredentials;
 
+/**
+ * @author Nigel Cook
+ * @author Alexandre Leites
+ * @author Cristina Scheibler
+ */
 public class EncryptedHPCredentials {
 	protected static Logger log = Logger.getLogger(EncryptedHPCredentials.class.getName());
 	

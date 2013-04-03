@@ -1,6 +1,4 @@
 /**
- * @author Nigel Cook
- *
  * (C) Copyright 2010-2012. Nigel Cook. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  * 
@@ -26,7 +24,9 @@ import n3phele.service.model.core.Entity;
 
 import com.googlecode.objectify.annotation.Cached;
 import com.googlecode.objectify.annotation.Unindexed;
-
+/**
+ * @author Nigel Cook
+ */
 @XmlRootElement(name="VirtualServers")
 @XmlType(name="VirtualServers", propOrder={})
 @Unindexed

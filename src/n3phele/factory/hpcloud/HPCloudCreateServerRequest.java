@@ -1,10 +1,10 @@
-/**
- * @author Alexandre Leites
- */
 package n3phele.factory.hpcloud;
 
 import javax.xml.bind.annotation.XmlRootElement;
 
+/**
+ * @author Alexandre Leites
+ */
 @XmlRootElement
 public class HPCloudCreateServerRequest {
 	public String	flavorRef;

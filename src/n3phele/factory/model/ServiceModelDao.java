@@ -1,6 +1,4 @@
 /**
- * @author Nigel Cook
- *
  * (C) Copyright 2010-2012. Nigel Cook. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  * 
@@ -18,6 +16,9 @@ import com.googlecode.objectify.ObjectifyService;
 import n3phele.service.model.core.GenericModelDao;
 import n3phele.service.model.core.VirtualServer;
 
+/**
+ * @author Nigel Cook
+ */
 public class ServiceModelDao<T> extends GenericModelDao<T> {
 
 	static {

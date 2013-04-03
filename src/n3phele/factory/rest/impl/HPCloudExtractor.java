@@ -1,6 +1,4 @@
 /**
- * @author Nigel Cook
- *
  * (C) Copyright 2010-2012. Nigel Cook. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  * 
@@ -32,7 +30,7 @@ import com.google.common.collect.Multimap;
 
 /** Introspects an object extracting name/value pairs.
  * @author Nigel Cook
- *
+ * @author Cristina Scheibler
  */
 public class HPCloudExtractor {
 	final static Logger logger = LoggerFactory.getLogger(HPCloudExtractor.class);
@@ -44,7 +42,6 @@ public class HPCloudExtractor {
 	 * @return list of extracted name/value pairs
 	 */
 	public static ArrayList<NameValue> extract(Server o) {
-		//logger.info("Extracting output parameters");
 		ArrayList<NameValue> result = new ArrayList<NameValue>();
 		Method methods[] = o.getClass().getMethods();
 		for(Method method : methods) {
@@ -64,8 +61,6 @@ public class HPCloudExtractor {
 									String valuePublic = getPublicAddresses(response);
 									result.add(new NameValue("privateIpAddress", valuePrivate));
 									result.add(new NameValue("publicIpAddress", valuePublic));
-									//logger.info("Added field privateIpAddress of type "+List.class+" with value "+valuePrivate);
-									//logger.info("Added field publicIpAddress of type "+List.class+" with value "+valuePublic);
 								}
 							} catch(Exception e) {
 								logger.warn(method.getName()+" with return "+target.getCanonicalName(), e);
@@ -84,7 +79,6 @@ public class HPCloudExtractor {
 									String value = response.toString();
 									String name = lowerCaseStart(field);
 									result.add(new NameValue(name, value));
-									//logger.info("Added field "+name+" of type "+response.getClass().getName()+" with value "+value);
 								}
 							} catch(Exception e) {
 								logger.warn(method.getName()+" with return "+target.getCanonicalName(), e);
@@ -112,7 +106,8 @@ public class HPCloudExtractor {
 		for (String access : multimap.keySet()) {
 			if(access.compareTo("private")==0){
 				Collection<Address> addresses = multimap.get(access);
-				for (Iterator iter = addresses.iterator(); iter.hasNext();) {
+				for (@SuppressWarnings("rawtypes")
+				Iterator iter = addresses.iterator(); iter.hasNext();) {
 					   Address add = (Address) iter.next();
 					   address = (add.getAddr());
 					   return address;
@@ -132,7 +127,8 @@ public class HPCloudExtractor {
 			//logger.info("multimap key access:" + access);
 				Collection<Address> addresses = multimap.get(access);
 				//logger.info("Collection size:" + addresses.size());
-				for (Iterator iter = addresses.iterator(); iter.hasNext();) {
+				for (@SuppressWarnings("rawtypes")
+				Iterator iter = addresses.iterator(); iter.hasNext();) {
 					   Address add = (Address) iter.next();
 					   address = (add.getAddr());
 					  
