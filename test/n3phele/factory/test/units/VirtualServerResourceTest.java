@@ -247,11 +247,23 @@ public class VirtualServerResourceTest {
 		{
 			return UriBuilder.fromUri(Resource.get("baseURI", "http://localhost:8889/resources")).path("virtualServer").build();
 		}
-
+		
 		@Override
-		protected GenericModelDao<VirtualServer> itemDaoFactory(boolean transactional)
+		public GenericModelDao<VirtualServer> itemDaoFactory()
 		{
-			return new ServiceModelDao<VirtualServer>(VirtualServer.class, transactional);
+			return new ServiceModelDao<VirtualServer>(VirtualServer.class);
+		}
+		
+		protected void add (VirtualServer vs){
+			super.add(vs);
+		}
+		
+		protected void delete (VirtualServer vs){
+			super.add(vs);
+		}
+		
+		protected VirtualServer get(Long id){
+			return super.get(id);
 		}
 	}
 

@@ -10,7 +10,7 @@
  *  specific language governing permissions and limitations under the License.
  */
 package n3phele.factory.rest.impl;
-
+import static com.googlecode.objectify.ObjectifyService.ofy;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -51,6 +51,9 @@ import n3phele.factory.hpcloud.HPCloudManager;
 import n3phele.factory.model.ServiceModelDao;
 import n3phele.service.core.NotFoundException;
 import n3phele.service.core.Resource;
+import n3phele.service.model.Action;
+import n3phele.service.model.CachingAbstractManager;
+import n3phele.service.model.VirtualServerStatus;
 import n3phele.service.model.core.AbstractManager;
 import n3phele.service.model.core.BaseEntity;
 import n3phele.service.model.core.Collection;
@@ -72,10 +75,14 @@ import org.slf4j.LoggerFactory;
 
 import com.google.apphosting.api.DeadlineExceededException;
 import com.googlecode.objectify.Key;
+import com.googlecode.objectify.VoidWork;
+import com.googlecode.objectify.Objectify;
+import com.googlecode.objectify.Work;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.core.util.Base64;
+
 
 
 /** EC2 Virtual Server Resource manages the lifecycle of virtual machines on Amazon EC2 (or compatible) clouds.
@@ -383,7 +390,7 @@ public class VirtualServerResource {
 			HPCloudManager hpcManager = new HPCloudManager(credentials);
 			item.setInstanceId(null);
 			item.setZombie(true);
-			updateStatus(item, "terminated");
+			updateStatus(item, VirtualServerStatus.terminated);
 			update(item);
 
 			/**
@@ -437,7 +444,7 @@ public class VirtualServerResource {
 			HPCloudManager hpcManager = new HPCloudManager(credentials);
 			item.setInstanceId(null);
 			item.setZombie(true);
-			updateStatus(item, "terminated");
+			updateStatus(item, VirtualServerStatus.terminated);
 			update(item);
 
 			/**
@@ -485,7 +492,7 @@ public class VirtualServerResource {
 			}
 			else
 			{				
-				if (!virtualServer.getStatus().equalsIgnoreCase("running")) 
+				if (!virtualServer.getStatus().equals(VirtualServerStatus.running)) 
 				{
 					logger.info("Server is " + virtualServer.getStatus());
 					result = false;
@@ -537,8 +544,7 @@ public class VirtualServerResource {
 
 		if (madeIntoZombie)
 		{
-			//TODO: Should we consider to use the Enums instead of hard coded string?
-			if (updateStatus(item, "terminated"))
+			if (updateStatus(item, VirtualServerStatus.terminated))
 				update(item);
 			
 			if (item.getStatus().equals("terminated"))
@@ -554,14 +560,14 @@ public class VirtualServerResource {
 			Server s = hpcManager.getServerById(locationId, item.getInstanceId());
 			if (s != null)
 			{
-				String currentStatus = mapStatus(s);
+				VirtualServerStatus currentStatus = mapStatus(s);
 				
 				//FIXME: Updating all virtual machines due to the delay to retrieve the public IP
 				/**
 				 * If the statuses are different, and the current cloud status
 				 * is ACTIVE (Running), we should update.
 				 */
-				if (!item.getStatus().equalsIgnoreCase(currentStatus) && currentStatus.compareTo("running") == 0) 
+				if (!item.getStatus().equals(currentStatus) && currentStatus.equals(VirtualServerStatus.running)) 
 				{
 					Map<String, String> tags = new HashMap<String, String>();
 					tags.put("n3phele-name", item.getName());
@@ -569,18 +575,14 @@ public class VirtualServerResource {
 					tags.put("n3phele-uri", item.getUri().toString());
 					hpcManager.putServerTags(item.getInstanceId(), locationId, tags);
 				}
-					
-				//TODO: check if necessary
-				/*s.getExtendedAttributes();*/
-				
+			
 				item.setOutputParameters(HPCloudExtractor.extract(s));		
 				
 				//TODO: only update to running if the public ip adrress is set
 				if (updateStatus(item, currentStatus))
 					update(item);
 
-				//TODO: Should we consider to use the Enums instead of hard coded string?
-				if (item.getStatus().equals("terminated"))
+				if (item.getStatus().equals(VirtualServerStatus.terminated))
 				{
 					logger.warn("Instance " + item.getInstanceId() + " terminated .. purging");
 					delete(item);
@@ -595,13 +597,13 @@ public class VirtualServerResource {
 		}
 	}
 	
-	private String mapStatus(Server s){
+	private VirtualServerStatus mapStatus(Server s){
 		
-		if(s.getStatus().toString().compareTo("ACTIVE")==0) return "running";
+		if(s.getStatus().toString().compareTo("ACTIVE")==0) return VirtualServerStatus.running;
 		else if(s.getStatus().toString().compareTo("BUILD")==0 || s.getStatus().toString().compareTo("REBUILD")==0 || s.getStatus().toString().compareTo("REBOOT")==0 || s.getStatus().toString().compareTo("HARD_REBOOT")==0){
-			return "initializing";
+			return VirtualServerStatus.initializing;
 		}else{
-			return "terminated";
+			return VirtualServerStatus.terminated;
 		}
 	}
 	
@@ -635,12 +637,12 @@ public class VirtualServerResource {
 		Server s = hpcManager.getServerById(locationId, item.getInstanceId());
 		if (s != null)
 		{
-			String currentStatus = mapStatus(s);
+			VirtualServerStatus currentStatus = mapStatus(s);
 			item.setStatus(currentStatus);
 		} else
 		{
 			logger.warn("Instance " + item.getInstanceId() + " not found, assumed terminated ..");
-			item.setStatus("Terminated");
+			item.setStatus(VirtualServerStatus.terminated);
 		}
 	}
 	
@@ -671,7 +673,7 @@ public class VirtualServerResource {
 		{
 			HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(s.getAccessKey(), s.getEncryptedKey()));
 			
-			if( s.getStatus().equalsIgnoreCase("terminated") )
+			if( s.getStatus().equals(VirtualServerStatus.terminated) )
 			{
 				logger.info("Found dead "+s.getName()+" with id "+s.getInstanceId()+" created "+s.getCreated());
 				manager.delete(s);
@@ -682,7 +684,7 @@ public class VirtualServerResource {
 			long now = new Date().getTime();
 			long age = ((now - created)% (60*60*1000))/60000;
 			
-			if(age > 55 || !s.getStatus().equalsIgnoreCase("running") || debugInstance || zombieInstance )
+			if(age > 55 || !s.getStatus().equals(VirtualServerStatus.running) || debugInstance || zombieInstance )
 			{
 				logger.info("Killing "+s.getName()+" with id "+s.getInstanceId()+" created "+s.getCreated());
 				s.setName(debugInstance? "debug" : "zombie");
@@ -732,8 +734,7 @@ public class VirtualServerResource {
 		String instanceId = item.getInstanceId();
 		try
 		{
-			//TODO: Should we consider to use the Enums instead of hard coded string?
-			if (!item.getStatus().equalsIgnoreCase("terminated") && instanceId != null && instanceId.length() > 0)
+			if (!item.getStatus().equals(VirtualServerStatus.terminated) && instanceId != null && instanceId.length() > 0)
 			{
 
 				HPCloudCredentials credentials = new HPCloudCredentials(item.getAccessKey(), item.getEncryptedKey());
@@ -752,7 +753,7 @@ public class VirtualServerResource {
 				if (result)
 				{
 					logger.warn("Instance " + item.getInstanceId() + "deleted");
-					if (updateStatus(item, "terminated"))
+					if (updateStatus(item, VirtualServerStatus.terminated))
 						update(item);
 					
 				} else
@@ -762,7 +763,7 @@ public class VirtualServerResource {
 			}
 			else
 			{
-				if (updateStatus(item, "terminated"))
+				if (updateStatus(item, VirtualServerStatus.terminated))
 					update(item);
 			}
 
@@ -801,26 +802,20 @@ public class VirtualServerResource {
 					}
 					
 					// zombie matches
-					GenericModelDao<VirtualServer> itemDaoTxn = null;
 					boolean claimed = false;
-					try
-					{
-						//TODO: update to new objectify version (see n3phele.service.lifecycle line 115)
-						itemDaoTxn = manager.itemDaoFactory(true);
-						VirtualServer zombie = itemDaoTxn.get(s.getId());
-						zombie.setIdempotencyKey(new Date().toString());
-						itemDaoTxn.put(zombie);
-						itemDaoTxn.delete(zombie);
-						itemDaoTxn.ofy().getTxn().commit();
+					final Long id = s.getId();
+					VirtualServerResource.dao.transact(new VoidWork(){
+							@Override
+							public void vrun() {
+							
+								VirtualServer zombie = VirtualServerResource.dao.get(id);
+								zombie.setIdempotencyKey(new Date().toString());
+								VirtualServerResource.dao.add(zombie);
+								VirtualServerResource.dao.delete(zombie);
+							}
+					 });
 						claimed = true;
-					} catch (Exception e)
-					{
-						logger.warn( "Zombie processing contention", e);
-					} finally
-					{
-						if (itemDaoTxn.ofy().getTxn().isActive())
-							itemDaoTxn.ofy().getTxn().rollback();
-					}
+					
 					if (claimed)
 					{
 						List<VirtualServer> leftOverZombies = getZombie();
@@ -832,7 +827,7 @@ public class VirtualServerResource {
 						logger.info("Claimed " + s.getInstanceId());
 						refreshVirtualServer(s);
 						
-						if( !s.getStatus().equalsIgnoreCase("running") )
+						if( !s.getStatus().equals(VirtualServerStatus.running) )
 						{
 							terminate(s);
 							continue;
@@ -841,7 +836,7 @@ public class VirtualServerResource {
 						item.setCreated(s.getCreated());
 						updateVirtualServer(item);
 						
-						if( item.getStatus().equalsIgnoreCase("running") )
+						if( item.getStatus().equals(VirtualServerStatus.running) )
 							return true;
 						else
 							continue; // There's no difference calling continue here, i think.
@@ -866,33 +861,32 @@ public class VirtualServerResource {
 		return (a.equals(b));
 	}
 	
-	protected boolean updateStatus(VirtualServer s, String newStatus)
+	protected boolean updateStatus(VirtualServer s, VirtualServerStatus newStatus)
 	{
-		String oldStatus = s.getStatus();
-		newStatus = newStatus.toLowerCase();
+		VirtualServerStatus oldStatus = s.getStatus();
 		if (oldStatus.equals(newStatus))
 			return false;
 		s.setStatus(newStatus);
 		try
 		{
-			sendNotification(s, oldStatus.toLowerCase(), newStatus);
+			sendNotification(s, oldStatus, newStatus);
 		} catch (Exception e)
 		{
 			logger.info("SendNotification exception to <" + s.getNotification() + "> from " + s.getUri() + " old: " + oldStatus + " new: " + s.getStatus(), e);
-			if (oldStatus.equals(newStatus.toUpperCase()))
+			if (oldStatus.equals(newStatus))
 			{
 				logger.warn("Cancelling SendNotification to <" + s.getNotification() + "> from " + s.getUri() + " old: " + oldStatus + " new: " + s.getStatus());
 			}
 			else
 			{
-				s.setStatus(newStatus.toUpperCase());
+				s.setStatus(newStatus);
 			}
 		}
 		return true;
 	}
 
 	
-	private void sendNotification(VirtualServer s, String oldStatus, String newStatus) throws Exception
+	private void sendNotification(VirtualServer s, VirtualServerStatus oldStatus, VirtualServerStatus newStatus) throws Exception
 	{
 		URI notification = s.getNotification();
 		logger.info("SendNotification to <" + notification + "> from " + s.getUri() + " old: " + oldStatus + " new: " + s.getStatus());
@@ -906,7 +900,7 @@ public class VirtualServerResource {
 		}
 		WebResource resource = client.resource(s.getNotification());
 
-		ClientResponse response = resource.queryParam("source", s.getUri().toString()).queryParam("oldStatus", oldStatus).queryParam("newStatus", newStatus).type(MediaType.TEXT_PLAIN).get(ClientResponse.class);
+		ClientResponse response = resource.queryParam("source", s.getUri().toString()).queryParam("oldStatus", oldStatus.toString()).queryParam("newStatus", newStatus.toString()).type(MediaType.TEXT_PLAIN).get(ClientResponse.class);
 		logger.info("Notificaion status " + response.getStatus());
 		if (response.getStatus() == 410)
 		{
@@ -1065,7 +1059,7 @@ public class VirtualServerResource {
 		}
 	}
 
-	private static class VirtualServerManager extends AbstractManager<VirtualServer> {
+	private static class VirtualServerManager extends CachingAbstractManager<VirtualServer> {
 
 		@Override
 		protected URI myPath()
@@ -1074,10 +1068,34 @@ public class VirtualServerResource {
 		}
 
 		@Override
-		protected GenericModelDao<VirtualServer> itemDaoFactory(boolean transactional)
-		{
-			return new ServiceModelDao<VirtualServer>(VirtualServer.class, transactional);
+		public GenericModelDao<VirtualServer> itemDaoFactory() {
+			return new ServiceModelDao<VirtualServer>(VirtualServer.class);
 		}
+		
+		public void add(VirtualServer vs){
+			super.add(vs);
+		}
+		
+		public VirtualServer get(Long id){
+			return super.get(id);
+		}
+		
+		public VirtualServer get(URI uri){
+			return super.get(uri);
+		}
+		
+		public void update(VirtualServer vs){
+			super.update(vs);
+		}
+		
+		public void delete(VirtualServer vs){
+			super.delete(vs);
+		}
+		
+		public Collection<VirtualServer> getCollection(){
+			return super.getCollection();
+		}
+		
 	}
 
 	/**
@@ -1092,8 +1110,8 @@ public class VirtualServerResource {
 	 * @param name
 	 * @return the item
 	 * @throws NotFoundException is the object does not exist
-	 */
-	public VirtualServer load(String name) throws NotFoundException { return manager.get(name); }
+	 *//*
+	public VirtualServer load(String name) throws NotFoundException { return manager.get(name); }*/
 	/**
 	 * Locate a item from the persistent store based on the item URI.
 	 * @param uri
@@ -1126,19 +1144,44 @@ public class VirtualServerResource {
 	public Collection<VirtualServer> getCollection() {return manager.getCollection();}
 	
 	public List<Key<VirtualServer>> getCollectionKeys() {
-
-		List<Key<VirtualServer>> result = null;
-		try { 
-			result = manager.itemDao().ofy().query(manager.itemDao().clazz).listKeys();
-		} catch (NotFoundException e) {
-		}
+		
+		 final List<Key<VirtualServer>> result = VirtualServerResource.dao.transact(new Work<List<Key<VirtualServer>>>() {
+             @Override
+             public List<Key<VirtualServer>> run() {
+            	 List<Key<VirtualServer>> resultTrans = VirtualServerResource.dao.itemDaoFactory().listKeys();
+                  return resultTrans;
+             }
+		 });
 		return result;
-
 	}
 	
-	public List<VirtualServer> getByIdempotencyKey(String key) { return manager.itemDao().ofy().query(VirtualServer.class).filter("idempotencyKey", key).list(); }
+	public List<VirtualServer> getByIdempotencyKey(String key) {
+		 
+		final String keyTrans = key;
+		final List<VirtualServer> result = VirtualServerResource.dao.transact(new Work<List<VirtualServer>>() {
+			@Override
+            public List<VirtualServer> run() {
+				List<VirtualServer> list = new ArrayList<VirtualServer>(VirtualServerResource.dao.itemDaoFactory().collectionByProperty("idempotencyKey", keyTrans));
+            	return list;
+            }
+		});
+		
+		return result;
+	}
 	
-	public List<VirtualServer> getZombie() { return manager.itemDao().ofy().query(VirtualServer.class).filter("name", "zombie").list(); }
+	public List<VirtualServer> getZombie() { 
+		
+		final List<VirtualServer> result = VirtualServerResource.dao.transact(new Work<List<VirtualServer>>() {
+			@Override
+            public List<VirtualServer> run() {
+				List<VirtualServer> list = new ArrayList<VirtualServer>(VirtualServerResource.dao.itemDaoFactory().collectionByProperty("name","zombie"));
+            	return list;
+            }
+		});
+		
+		return result;
+		
+	}
 	
 	public final static TypedParameter inputParameters[] =  {
 		new TypedParameter("flavorRef", "Specifies the virtual machine size. Valid Values: 100 (standard.xsmall), 101 (standard.small), 102 (standard.medium), 103 (standard.large), 104 (standard.xlarge), 105 (standard.2xlarge)", ParameterType.String,"", "100"),
@@ -1172,4 +1215,6 @@ public class VirtualServerResource {
 		new TypedParameter("UserId", "User id of the server", ParameterType.String, "", ""),
 		new TypedParameter("UuId", "Unique server id", ParameterType.String, "", "")
 	};
+	
+	final public static VirtualServerManager dao = new VirtualServerManager();
 }

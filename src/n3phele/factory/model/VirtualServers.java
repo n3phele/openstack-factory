@@ -22,15 +22,15 @@ import javax.xml.bind.annotation.XmlType;
 import n3phele.service.model.core.Collection;
 import n3phele.service.model.core.Entity;
 
-import com.googlecode.objectify.annotation.Cached;
-import com.googlecode.objectify.annotation.Unindexed;
+import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Unindex;
 /**
  * @author Nigel Cook
  */
 @XmlRootElement(name="VirtualServers")
 @XmlType(name="VirtualServers", propOrder={})
-@Unindexed
-@Cached
+@Unindex
+@Cache
 public class VirtualServers extends Collection<Entity> {
 	private static final long serialVersionUID = -3896104069780190325L;
 	

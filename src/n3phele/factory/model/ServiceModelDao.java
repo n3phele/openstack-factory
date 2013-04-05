@@ -25,8 +25,9 @@ public class ServiceModelDao<T> extends GenericModelDao<T> {
 		// Register all your entity classes here
 		ObjectifyService.register(VirtualServer.class);
 	}
-	public ServiceModelDao(Class<T> clazz, boolean transactional) {
-		super(clazz, transactional);
+	public ServiceModelDao(Class<T> clazz) {
+		super(clazz);
+		
 	}
 
 }
