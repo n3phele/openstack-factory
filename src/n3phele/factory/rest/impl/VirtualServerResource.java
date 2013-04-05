@@ -10,7 +10,7 @@
  *  specific language governing permissions and limitations under the License.
  */
 package n3phele.factory.rest.impl;
-import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -51,10 +51,8 @@ import n3phele.factory.hpcloud.HPCloudManager;
 import n3phele.factory.model.ServiceModelDao;
 import n3phele.service.core.NotFoundException;
 import n3phele.service.core.Resource;
-import n3phele.service.model.Action;
 import n3phele.service.model.CachingAbstractManager;
 import n3phele.service.model.VirtualServerStatus;
-import n3phele.service.model.core.AbstractManager;
 import n3phele.service.model.core.BaseEntity;
 import n3phele.service.model.core.Collection;
 import n3phele.service.model.core.CreateVirtualServerResponse;
@@ -76,7 +74,6 @@ import org.slf4j.LoggerFactory;
 import com.google.apphosting.api.DeadlineExceededException;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.VoidWork;
-import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.Work;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
