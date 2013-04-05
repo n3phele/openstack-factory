@@ -584,7 +584,6 @@ public class VirtualServerResource {
 			{
 				VirtualServerStatus currentStatus = mapStatus(s);
 				
-				//FIXME: Updating all virtual machines due to the delay to retrieve the public IP
 				/**
 				 * If the statuses are different, and the current cloud status
 				 * is ACTIVE (Running), we should update.
@@ -596,13 +595,14 @@ public class VirtualServerResource {
 					tags.put("n3phele-factory", Resource.get("factoryName", FACTORY_NAME));
 					tags.put("n3phele-uri", item.getUri().toString());
 					hpcManager.putServerTags(item.getInstanceId(), locationId, tags);
+					item.setOutputParameters(HPCloudExtractor.extract(s));		
 				}
 			
-				item.setOutputParameters(HPCloudExtractor.extract(s));		
-				
-				//TODO: only update to running if the public ip adrress is set
-				if (updateStatus(item, currentStatus))
-					update(item);
+				//Only update to running if the public ip adrress is set
+				if(publicIPSet(item)){
+					if (updateStatus(item, currentStatus))
+						update(item);
+				}
 
 				if (item.getStatus().equals(VirtualServerStatus.terminated))
 				{
@@ -617,6 +617,18 @@ public class VirtualServerResource {
 				return;
 			}
 		}
+	}
+	
+	private boolean publicIPSet(VirtualServer vs){
+		String publicIP = "";
+		String privateIP = "";
+		for(NameValue nameValue:vs.getParameters()){
+			if(nameValue.getKey().equalsIgnoreCase("publicIP")) publicIP = nameValue.getValue();
+			if(nameValue.getKey().equalsIgnoreCase("privateIP")) privateIP = nameValue.getValue();
+		}
+		
+		if(publicIP.compareTo(privateIP)==0)return false;
+		else return true;
 	}
 	
 	private VirtualServerStatus mapStatus(Server s){
