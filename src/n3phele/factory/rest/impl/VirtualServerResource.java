@@ -197,7 +197,7 @@ public class VirtualServerResource {
 		logger.info("Creating hp cloud request");
 		HPCloudCreateServerRequest hpcRequest = new HPCloudCreateServerRequest();
 		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(r.accessKey, r.encryptedSecret));
-		
+		logger.info("Setting parameters");
 		for (NameValue p : r.parameters)
 		{
 			if (p.getKey().equalsIgnoreCase("nodeCount"))
@@ -248,7 +248,7 @@ public class VirtualServerResource {
 
 		hpcRequest.nodeCount = nodeCount;
 		hpcRequest.serverName = r.name;
-		
+		logger.info("Creating zombie");
 		/**
 		 * We're creating a temporary VirtualServer item to call createWithZombie method if we're creating just one machine.
 		 * If zombie is created with success, they'll just initialize the ArrayLists.
@@ -261,6 +261,7 @@ public class VirtualServerResource {
 		
 		if( nodeCount == 1 && createWithZombie(temp) )
 		{
+			logger.info("Only one zombie vs");
 			vmRefs 		= new ArrayList<URI>(1);
 			siblings 	= new ArrayList<String>(1);
 			vsList 		= new ArrayList<VirtualServer>(1);
@@ -270,6 +271,7 @@ public class VirtualServerResource {
 		}
 		else
 		{
+			logger.info("More than one zombie vs");
 			List<ServerCreated> resultList = hpcManager.createServerRequest(hpcRequest);
 			
 			vmRefs 		= new ArrayList<URI>(resultList.size());
@@ -811,6 +813,7 @@ public class VirtualServerResource {
 	
 	private boolean createWithZombie(VirtualServer item)
 	{
+		logger.info("Entered createWithZombie");
 		List<VirtualServer> zombies = getZombie();
 		if (zombies != null)
 		{
@@ -1203,16 +1206,12 @@ public class VirtualServerResource {
 	}
 	
 	public List<VirtualServer> getZombie() { 
-		
-		final List<VirtualServer> result = VirtualServerResource.dao.transact(new Work<List<VirtualServer>>() {
-			@Override
-            public List<VirtualServer> run() {
-				List<VirtualServer> list = new ArrayList<VirtualServer>(VirtualServerResource.dao.itemDaoFactory().collectionByProperty("name","zombie"));
-            	return list;
-            }
-		});
-		
-		return result;
+		logger.info("Getting zombie list");		 
+		 
+		 List<VirtualServer> list = new ArrayList<VirtualServer>(VirtualServerResource.dao.itemDaoFactory().collectionByProperty("name","zombie"));		 
+	
+		logger.info("Got zombie list");
+		return list;
 		
 	}
 	
