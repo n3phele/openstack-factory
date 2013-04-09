@@ -583,7 +583,7 @@ public class VirtualServerResource {
 			Server s = hpcManager.getServerById(locationId, item.getInstanceId());
 			if (s != null)
 			{
-				VirtualServerStatus currentStatus = mapStatus(s);
+				VirtualServerStatus currentStatus = mapStatus(s);	
 				
 				/**
 				 * If the statuses are different, and the current cloud status
@@ -598,12 +598,27 @@ public class VirtualServerResource {
 					hpcManager.putServerTags(item.getInstanceId(), locationId, tags);
 					item.setOutputParameters(HPCloudExtractor.extract(s));		
 				}
-			
-				//Only update to running if the public ip adrress is set
-				if(publicIPSet(item)){
+				
+				String publicIP = "";
+				String privateIP = "";
+				for(NameValue p:item.getOutputParameters()){
+					if(p.getKey().equalsIgnoreCase("publicIpAddress" )){
+						publicIP = p.getValue();
+						logger.warn("Name: "+p.getKey()+" ,Value: "+p.getValue());
+					}
+					if(p.getKey().equalsIgnoreCase("privateIpAddress" )){
+						privateIP = p.getValue();
+						logger.warn("Name: "+p.getKey()+" ,Value: "+p.getValue());
+					}
+				}
+								
+				if(!(publicIP.equalsIgnoreCase(privateIP))){
+					logger.warn("IP public is set, updating vs");
 					if (updateStatus(item, currentStatus))
 						update(item);
 				}
+				
+				
 
 				if (item.getStatus().equals(VirtualServerStatus.terminated))
 				{
@@ -618,19 +633,7 @@ public class VirtualServerResource {
 				return;
 			}
 		}
-	}
-	
-	private boolean publicIPSet(VirtualServer vs){
-		String publicIP = "";
-		String privateIP = "";
-		for(NameValue nameValue:vs.getParameters()){
-			if(nameValue.getKey().equalsIgnoreCase("publicIP")) publicIP = nameValue.getValue();
-			if(nameValue.getKey().equalsIgnoreCase("privateIP")) privateIP = nameValue.getValue();
-		}
-		
-		if(publicIP.compareTo(privateIP)==0)return false;
-		else return true;
-	}
+	}	
 	
 	private VirtualServerStatus mapStatus(Server s){
 		
