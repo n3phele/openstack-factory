@@ -10,7 +10,6 @@
  *  specific language governing permissions and limitations under the License.
  */
 package n3phele.factory.rest.impl;
-
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -660,7 +659,7 @@ public class VirtualServerResource {
 	}
 
 
-	private void refreshVirtualServer(VirtualServer item)
+	protected void refreshVirtualServer(VirtualServer item)
 	{
 		if (item == null)
 			return;
@@ -810,7 +809,7 @@ public class VirtualServerResource {
 
 	}
 	
-	private boolean createWithZombie(VirtualServer item)
+	protected boolean createWithZombie(VirtualServer item)
 	{
 		logger.info("Entered createWithZombie");
 		List<VirtualServer> zombies = getZombie();
@@ -824,6 +823,7 @@ public class VirtualServerResource {
 				boolean secretMatch = s.getEncryptedKey().equals(item.getEncryptedKey());
 				logger.info(" Zombie " + s.getInstanceId() + " location "+ locationMatch + " access " + accessMatch + " secret "+ secretMatch);
 				
+				logger.info(" locationMatch: " + locationMatch + " accessMatch: " + accessMatch + " secretMatch: " + secretMatch);
 				if (locationMatch && accessMatch && secretMatch)
 				{
 					Map<String, String> map = s.getParametersMap();
@@ -839,17 +839,19 @@ public class VirtualServerResource {
 					// zombie matches
 					boolean claimed = false;
 					final Long id = s.getId();
-					VirtualServerResource.dao.transact(new VoidWork(){
+					VirtualServerResource.dao.transact(new VoidWork()
+					{
 							@Override
-							public void vrun() {
-							
+							public void vrun()
+							{
 								VirtualServer zombie = VirtualServerResource.dao.get(id);
 								zombie.setIdempotencyKey(new Date().toString());
 								VirtualServerResource.dao.add(zombie);
 								VirtualServerResource.dao.delete(zombie);
 							}
 					 });
-						claimed = true;
+					//FIXME: This variable need to be into vrun().
+					claimed = true;
 					
 					if (claimed)
 					{

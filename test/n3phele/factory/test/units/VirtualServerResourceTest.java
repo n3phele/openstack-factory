@@ -6,6 +6,7 @@ import static org.junit.Assert.fail;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.List;
 
 import javax.ws.rs.core.UriBuilder;
 
@@ -19,11 +20,15 @@ import n3phele.service.model.core.Collection;
 import n3phele.service.model.core.GenericModelDao;
 import n3phele.service.model.core.NameValue;
 import n3phele.service.model.core.VirtualServer;
+import n3phele.service.model.core.VirtualServerStatus;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mockito;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.reflect.Whitebox;
 
 import com.google.appengine.tools.development.testing.LocalDatastoreServiceTestConfig;
 import com.google.appengine.tools.development.testing.LocalServiceTestHelper;
@@ -225,6 +230,31 @@ public class VirtualServerResourceTest {
 		
 		//If virtual server was deleted, this method throws an exception
 		VirtualServer virtualServer = manager.get(vs.getId());
+	}
+	
+	@Test
+	public void createWithZombieTest() throws Exception
+	{
+		final VirtualServerManager manager	= new VirtualServerManager();
+		final List<VirtualServer> list 		= new ArrayList<VirtualServer>();
+		
+		VirtualServer vs1 = new VirtualServer("zombie", "desc", new URI("http://location.com"), new ArrayList<NameValue>(), new URI("http://notification.com"), "accessKey", "encryptedSecret", new URI("http://owner.com"), "idempotencyKey");
+		VirtualServer vs2 = new VirtualServer("zombie", "desc", new URI("http://location.com"), new ArrayList<NameValue>(), new URI("http://notification.com"), "accessKey", "encryptedSecret", new URI("http://owner.com"), "idempotencyKey");
+		VirtualServer vs3 = new VirtualServer("zombie", "desc", new URI("http://something.com"), new ArrayList<NameValue>(), new URI("http://notification.com"), "accessKey", "encryptedSecret", new URI("http://owner.com"), "idempotencyKey");
+		vs1.setStatus(VirtualServerStatus.running);
+		vs2.setStatus(VirtualServerStatus.running);
+		vs3.setStatus(VirtualServerStatus.running);
+		
+		list.add(vs1);
+		manager.add(vs1);
+		
+		VirtualServerResource virtualServerResource = PowerMockito.spy(new VirtualServerResource());
+		PowerMockito.doNothing().when(virtualServerResource, "refreshVirtualServer", Mockito.any());
+		PowerMockito.doNothing().when(virtualServerResource, "updateVirtualServer", Mockito.any());
+		PowerMockito.when(virtualServerResource, "getZombie").thenReturn(list);
+		
+		assertEquals(true, Whitebox.invokeMethod(virtualServerResource, "createWithZombie", vs2) );
+		assertEquals(false, Whitebox.invokeMethod(virtualServerResource, "createWithZombie", vs3) );
 	}
 
 	private VirtualServer createFakeDataVirtualServer() {
