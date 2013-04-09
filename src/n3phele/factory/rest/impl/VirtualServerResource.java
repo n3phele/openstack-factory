@@ -51,8 +51,8 @@ import n3phele.factory.hpcloud.HPCloudManager;
 import n3phele.factory.model.ServiceModelDao;
 import n3phele.service.core.NotFoundException;
 import n3phele.service.core.Resource;
-import n3phele.service.model.CachingAbstractManager;
-import n3phele.service.model.VirtualServerStatus;
+import n3phele.service.model.core.AbstractManager;
+import n3phele.service.model.core.VirtualServerStatus;
 import n3phele.service.model.core.BaseEntity;
 import n3phele.service.model.core.Collection;
 import n3phele.service.model.core.CreateVirtualServerResponse;
@@ -197,6 +197,7 @@ public class VirtualServerResource {
 		logger.info("Setting parameters");
 		for (NameValue p : r.parameters)
 		{
+			logger.info("Paramater: "+p.getKey()+" ,value: "+p.getValue());
 			if (p.getKey().equalsIgnoreCase("nodeCount"))
 			{
 				String value = p.getValue();
@@ -268,9 +269,7 @@ public class VirtualServerResource {
 		}
 		else
 		{
-			logger.info("More than one zombie vs");
 			List<ServerCreated> resultList = hpcManager.createServerRequest(hpcRequest);
-			
 			vmRefs 		= new ArrayList<URI>(resultList.size());
 			siblings 	= new ArrayList<String>(resultList.size());
 			vsList 		= new ArrayList<VirtualServer>(resultList.size());
@@ -280,8 +279,9 @@ public class VirtualServerResource {
 				VirtualServer item = new VirtualServer(srv.getName(), r.description, r.location, r.parameters, r.notification, r.accessKey, r.encryptedSecret, r.owner, r.idempotencyKey);
 				item.setCreated(epoch);
 				item.setInstanceId(srv.getId());
-				add(item);
 				logger.info("Created new VirtualServer: "+item.getUri());
+				add(item);
+				logger.info("Added new VirtualServer: "+item.getUri());
 				vsList.add(item);
 				vmRefs.add(item.getUri());
 			}
@@ -295,8 +295,10 @@ public class VirtualServerResource {
 		for(VirtualServer s : vsList)
 		{
 			s.setSiblings(siblings);
+			logger.info("updating");
 			update(s);
 		}
+		logger.info("Created new VirtualServer");
 		return Response.created(vsList.get(0).getUri()).entity(new CreateVirtualServerResponse(vmRefs)).build();
 	}
 
@@ -632,8 +634,8 @@ public class VirtualServerResource {
 	
 	private VirtualServerStatus mapStatus(Server s){
 		
-		if(s.getStatus().toString().compareTo("ACTIVE")==0) return VirtualServerStatus.running;
-		else if(s.getStatus().toString().compareTo("BUILD")==0 || s.getStatus().toString().compareTo("REBUILD")==0 || s.getStatus().toString().compareTo("REBOOT")==0 || s.getStatus().toString().compareTo("HARD_REBOOT")==0){
+		if(s.getStatus().toString().compareTo("BUILD")==0 ||s.getStatus().toString().compareTo("ACTIVE")==0) return VirtualServerStatus.running;
+		else if( s.getStatus().toString().compareTo("REBUILD")==0 || s.getStatus().toString().compareTo("REBOOT")==0 || s.getStatus().toString().compareTo("HARD_REBOOT")==0){
 			return VirtualServerStatus.initializing;
 		}else{
 			return VirtualServerStatus.terminated;
@@ -1092,7 +1094,7 @@ public class VirtualServerResource {
 		}
 	}
 
-	private static class VirtualServerManager extends CachingAbstractManager<VirtualServer> {
+	private static class VirtualServerManager extends AbstractManager<VirtualServer> {
 
 		@Override
 		protected URI myPath()

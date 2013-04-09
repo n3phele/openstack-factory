@@ -219,8 +219,10 @@ public class HPCloudManager {
 		/**
 		 * Custom commands
 		 */
-		if( r.user_data.length() > 0 )
-			options.userData(r.user_data.getBytes());
+		if(r.user_data!= null){
+			if( r.user_data.length() > 0 )
+				options.userData(r.user_data.getBytes());
+		}
 		
 		/**
 		 * Append n3phele prefix
