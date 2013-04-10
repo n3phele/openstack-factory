@@ -558,8 +558,7 @@ public class VirtualServerResource {
 	 */
 
 	protected void updateVirtualServer(VirtualServer item) throws IllegalArgumentException
-		
-	{			
+	{
 		HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(item.getAccessKey(), item.getEncryptedKey()));
 		String instanceId = item.getInstanceId();
 		boolean madeIntoZombie = item.isZombie();
@@ -600,24 +599,27 @@ public class VirtualServerResource {
 				
 				String publicIP = "";
 				String privateIP = "";
-				for(NameValue p:item.getOutputParameters()){
-					if(p.getKey().equalsIgnoreCase("publicIpAddress" )){
+				ArrayList<NameValue> params = item.getOutputParameters();
+				for(NameValue p : params)
+				{
+					if(p.getKey().equalsIgnoreCase("publicIpAddress" ))
+					{
 						publicIP = p.getValue();
 						logger.warn("Name: "+p.getKey()+" ,Value: "+p.getValue());
 					}
-					if(p.getKey().equalsIgnoreCase("privateIpAddress" )){
+					if(p.getKey().equalsIgnoreCase("privateIpAddress" ))
+					{
 						privateIP = p.getValue();
 						logger.warn("Name: "+p.getKey()+" ,Value: "+p.getValue());
 					}
 				}
 								
-				if(!(publicIP.equalsIgnoreCase(privateIP))){
+				if(!(publicIP.equalsIgnoreCase(privateIP)))
+				{
 					logger.warn("IP public is set, updating vs");
 					if (updateStatus(item, currentStatus))
 						update(item);
 				}
-				
-				
 
 				if (item.getStatus().equals(VirtualServerStatus.terminated))
 				{
@@ -632,14 +634,20 @@ public class VirtualServerResource {
 				return;
 			}
 		}
-	}	
+	}
 	
-	private VirtualServerStatus mapStatus(Server s){
-		
-		if(s.getStatus().toString().compareTo("BUILD")==0 ||s.getStatus().toString().compareTo("ACTIVE")==0) return VirtualServerStatus.running;
-		else if( s.getStatus().toString().compareTo("REBUILD")==0 || s.getStatus().toString().compareTo("REBOOT")==0 || s.getStatus().toString().compareTo("HARD_REBOOT")==0){
+	private VirtualServerStatus mapStatus(Server s)
+	{	
+		if( s.getStatus().toString().compareTo("ACTIVE")==0 )
+		{
+			return VirtualServerStatus.running;
+		}
+		else if( s.getStatus().toString().compareTo("BUILD")==0 || s.getStatus().toString().compareTo("REBUILD")==0 || s.getStatus().toString().compareTo("REBOOT")==0 || s.getStatus().toString().compareTo("HARD_REBOOT")==0)
+		{
 			return VirtualServerStatus.initializing;
-		}else{
+		}
+		else
+		{
 			return VirtualServerStatus.terminated;
 		}
 	}
