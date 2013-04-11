@@ -1,7 +1,7 @@
 openstack-factory
 =================
 
-Native openstack virtual machine factory  
+Native openstack virtual machine factory.  
 
 Eclipse Configuration
 =====================
