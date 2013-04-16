@@ -8,6 +8,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.print.attribute.standard.Sides;
 import javax.ws.rs.core.UriBuilder;
 
 import n3phele.factory.model.ServiceModelDao;
@@ -25,6 +26,7 @@ import n3phele.service.model.core.VirtualServerStatus;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
@@ -255,6 +257,45 @@ public class VirtualServerResourceTest {
 		
 		assertEquals(true, Whitebox.invokeMethod(virtualServerResource, "createWithZombie", vs2) );
 		assertEquals(false, Whitebox.invokeMethod(virtualServerResource, "createWithZombie", vs3) );
+	}
+	
+	@Test
+	public void isZombieCandidateTest() throws Exception
+	{
+		VirtualServerResource virtualServerResource = PowerMockito.spy(new VirtualServerResource());
+		
+		//a non empty list of siblings
+		ArrayList<String> siblings = new ArrayList<String>();
+		siblings.add("http://location1.com");
+		siblings.add("http://location2.com");
+		
+		//vs1 is running and has siblings empty
+		VirtualServer vs1 = new VirtualServer("zombificable0", "desc", new URI("http://location.com"), new ArrayList<NameValue>(), new URI("http://notification.com"), "accessKey", "encryptedSecret", new URI("http://owner.com"), "idempotencyKey");
+		vs1.setStatus(VirtualServerStatus.running);
+		vs1.setInstanceId("InstanceID01");
+		vs1.setSiblings(new ArrayList<String>());
+		
+		//vs2 is terminated and has siblings
+		VirtualServer vs2 = new VirtualServer("unzombificable0", "desc", new URI("http://location.com"), new ArrayList<NameValue>(), new URI("http://notification.com"), "accessKey", "encryptedSecret", new URI("http://owner.com"), "idempotencyKey");
+		vs2.setStatus(VirtualServerStatus.terminated);
+		vs2.setInstanceId("InstanceID02");
+		vs2.setSiblings(siblings);
+
+		//vs3 is running and has siblings
+		VirtualServer vs3 = new VirtualServer("unzombificable1", "desc", new URI("http://location.com"), new ArrayList<NameValue>(), new URI("http://notification.com"), "accessKey", "encryptedSecret", new URI("http://owner.com"), "idempotencyKey");
+		vs3.setStatus(VirtualServerStatus.running);
+		vs3.setInstanceId("InstanceID03");
+		vs3.setSiblings(siblings);
+
+		//vs4 is running and has siblings in default value
+		VirtualServer vs4 = new VirtualServer("zombificable1", "desc", new URI("http://location.com"), new ArrayList<NameValue>(), new URI("http://notification.com"), "accessKey", "encryptedSecret", new URI("http://owner.com"), "idempotencyKey");
+		vs4.setStatus(VirtualServerStatus.running);
+		vs4.setInstanceId("InstanceID04");		
+		
+		assertEquals("vs1 should be zimbificable", true, Whitebox.invokeMethod(virtualServerResource, "isZombieCandidate", vs1));
+		assertEquals("vs2 should not be zimbificable", false, Whitebox.invokeMethod(virtualServerResource, "isZombieCandidate", vs2));
+		assertEquals("vs3 should not be zimbificable", false, Whitebox.invokeMethod(virtualServerResource, "isZombieCandidate", vs3));
+		assertEquals("vs4 should be zimbificable", true, Whitebox.invokeMethod(virtualServerResource, "isZombieCandidate", vs4));
 	}
 
 	private VirtualServer createFakeDataVirtualServer() {
