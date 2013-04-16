@@ -559,7 +559,7 @@ public class VirtualServerResource {
 
 	protected void updateVirtualServer(VirtualServer item) throws IllegalArgumentException
 	{
-		HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(item.getAccessKey(), item.getEncryptedKey()));
+		HPCloudManager hpcManager = getHPCloudManager(item.getAccessKey(), item.getEncryptedKey());
 		String instanceId = item.getInstanceId();
 		boolean madeIntoZombie = item.isZombie();
 
@@ -675,7 +675,7 @@ public class VirtualServerResource {
 		if (item == null)
 			return;
 
-		HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(item.getAccessKey(), item.getEncryptedKey()));
+		HPCloudManager hpcManager = getHPCloudManager(item.getAccessKey(), item.getEncryptedKey());
 
 		String locationId = getLocationId(item);
 
@@ -713,14 +713,13 @@ public class VirtualServerResource {
 					debugInstance = true;
 				else if( p.getValue().equalsIgnoreCase("zombie") )
 					zombieInstance = true;
-				
 				break;
 			}
 		}
 		
 		if(zombieInstance || debugInstance )
 		{
-			HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(s.getAccessKey(), s.getEncryptedKey()));
+			HPCloudManager hpcManager = getHPCloudManager(s.getAccessKey(), s.getEncryptedKey());
 			
 			if( s.getStatus().equals(VirtualServerStatus.terminated) )
 			{
@@ -744,6 +743,14 @@ public class VirtualServerResource {
 			}
 		}
 		return false;
+	}
+
+
+
+	protected HPCloudManager getHPCloudManager(String acessKey, String encryptedKey)
+	{
+		HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(acessKey, encryptedKey));
+		return hpcManager;
 	}
 
 	private Collection<BaseEntity> refreshCollection()
@@ -1218,7 +1225,7 @@ public class VirtualServerResource {
 	}
 	
 	public List<VirtualServer> getZombie() { 
-		logger.info("Getting zombie list");		 
+		logger.info("Getting zombie list...");		 
 		 
 		 List<VirtualServer> list = new ArrayList<VirtualServer>(VirtualServerResource.dao.itemDaoFactory().collectionByProperty("name","zombie"));		 
 	
