@@ -62,6 +62,7 @@ import n3phele.service.model.core.ParameterType;
 import n3phele.service.model.core.TypedParameter;
 import n3phele.service.model.core.VirtualServer;
 
+import org.jclouds.openstack.nova.v2_0.domain.Image;
 import org.jclouds.openstack.nova.v2_0.domain.KeyPair;
 import org.jclouds.openstack.nova.v2_0.domain.RebootType;
 import org.jclouds.openstack.nova.v2_0.domain.SecurityGroup;
@@ -190,6 +191,7 @@ public class VirtualServerResource {
 	public Response create(ExecutionFactoryCreateRequest r) throws Exception
 	{
 		int nodeCount = 1;
+		boolean windows = false;
 		logger.info("Creating hp cloud request");
 		HPCloudCreateServerRequest hpcRequest = new HPCloudCreateServerRequest();
 		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(r.accessKey, r.encryptedSecret));
@@ -242,7 +244,10 @@ public class VirtualServerResource {
 				hpcRequest.keyName = p.getValue();
 			}
 		}
-
+		
+		// Detect a windows image
+		windows = isWindows(r.accessKey, r.encryptedSecret, hpcRequest.locationId, hpcRequest.imageRef);
+		
 		hpcRequest.nodeCount = nodeCount;
 		hpcRequest.serverName = r.name;
 		logger.info("Creating zombie");
@@ -263,6 +268,8 @@ public class VirtualServerResource {
 			siblings 	= new ArrayList<String>(1);
 			vsList 		= new ArrayList<VirtualServer>(1);
 			
+			temp.setWindows(windows);
+			
 			vsList.add(temp);
 			vmRefs.add(temp.getUri());
 		}
@@ -278,6 +285,7 @@ public class VirtualServerResource {
 				VirtualServer item = new VirtualServer(srv.getName(), r.description, r.location, r.parameters, r.notification, r.accessKey, r.encryptedSecret, r.owner, r.idempotencyKey);
 				item.setCreated(epoch);
 				item.setInstanceId(srv.getId());
+				item.setWindows(windows);
 				logger.info("Created new VirtualServer: "+item.getUri());
 				add(item);
 				logger.info("Added new VirtualServer: "+item.getUri());
@@ -1101,6 +1109,17 @@ public class VirtualServerResource {
 		return true;
 	}
 	
+	protected boolean isWindows(String id, String secret, String locationId, String imageId)
+	{
+		HPCloudManager hpcManager 	= new HPCloudManager(getHPCredentials(id, secret));
+		Image image 				= hpcManager.getImageById(locationId, imageId);
+		
+		if( image.getName().contains("Windows") )
+			return true;
+		
+		return false;
+	}
+	
 	protected HPCloudCredentials getHPCredentials(String identity, String secretKey)
 	{
 		try
@@ -1264,7 +1283,8 @@ public class VirtualServerResource {
 		new TypedParameter("TenantId", "Group id of the server", ParameterType.String, "", ""),
 		new TypedParameter("Updated", "When the server was last updated", ParameterType.String, "", ""),
 		new TypedParameter("UserId", "User id of the server", ParameterType.String, "", ""),
-		new TypedParameter("UuId", "Unique server id", ParameterType.String, "", "")
+		new TypedParameter("UuId", "Unique server id", ParameterType.String, "", ""),
+		new TypedParameter("costPerHour", "Cost charged per hour", ParameterType.String, "", "")
 	};
 	
 	final public static VirtualServerManager dao = new VirtualServerManager();
