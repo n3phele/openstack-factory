@@ -16,11 +16,11 @@ import org.jclouds.compute.ComputeService;
 import org.jclouds.compute.ComputeServiceContext;
 import org.jclouds.compute.domain.ComputeMetadata;
 import org.jclouds.compute.domain.Hardware;
-import org.jclouds.compute.domain.Image;
 import org.jclouds.domain.Location;
 import org.jclouds.gae.config.AsyncGoogleAppEngineConfigurationModule;
 import org.jclouds.logging.slf4j.config.SLF4JLoggingModule;
 import org.jclouds.openstack.nova.v2_0.NovaApi;
+import org.jclouds.openstack.nova.v2_0.domain.Image;
 import org.jclouds.openstack.nova.v2_0.domain.Ingress;
 import org.jclouds.openstack.nova.v2_0.domain.IpProtocol;
 import org.jclouds.openstack.nova.v2_0.domain.KeyPair;
@@ -30,6 +30,7 @@ import org.jclouds.openstack.nova.v2_0.domain.Server;
 import org.jclouds.openstack.nova.v2_0.domain.ServerCreated;
 import org.jclouds.openstack.nova.v2_0.extensions.KeyPairApi;
 import org.jclouds.openstack.nova.v2_0.extensions.SecurityGroupApi;
+import org.jclouds.openstack.nova.v2_0.features.ImageApi;
 import org.jclouds.openstack.nova.v2_0.features.ServerApi;
 import org.jclouds.openstack.nova.v2_0.options.CreateServerOptions;
 import org.jclouds.rest.RestContext;
@@ -93,10 +94,10 @@ public class HPCloudManager {
 	 * @return list of available images into HP Cloud provider. This includes
 	 *         user custom images too.
 	 */
-	public Set<? extends Image> listImages()
+	/*public Set<? extends Image> listImages()
 	{
 		return mCompute.listImages();
-	}
+	}*/
 
 	/**
 	 * @return list of available hardware profiles (flavors) into HP Cloud
@@ -184,6 +185,22 @@ public class HPCloudManager {
 		ServerApi serverApi = mNovaApi.getServerApiForZone(zone);
 		
 		return serverApi.get(Id);
+	}
+	
+	/**
+	 * 
+	 * @param zone Compute zone
+	 * @param Id Image Id
+	 * @return Image object
+	 */
+	public Image getImageById(String zone, String Id)
+	{
+		/**
+		 * Get image async api
+		 */
+		ImageApi imageApi = mNovaApi.getImageApiForZone(zone);
+		
+		return imageApi.get(Id);
 	}
 
 	/**
