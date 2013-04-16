@@ -1257,7 +1257,8 @@ public class VirtualServerResource {
 		new TypedParameter("TenantId", "Group id of the server", ParameterType.String, "", ""),
 		new TypedParameter("Updated", "When the server was last updated", ParameterType.String, "", ""),
 		new TypedParameter("UserId", "User id of the server", ParameterType.String, "", ""),
-		new TypedParameter("UuId", "Unique server id", ParameterType.String, "", "")
+		new TypedParameter("UuId", "Unique server id", ParameterType.String, "", ""),
+		new TypedParameter("costPerHour", "Cost charged per hour", ParameterType.String, "", "")
 	};
 	
 	final public static VirtualServerManager dao = new VirtualServerManager();
