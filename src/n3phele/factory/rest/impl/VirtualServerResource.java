@@ -192,10 +192,7 @@ public class VirtualServerResource {
 	@Path("virtualServer")
 	public Response create(ExecutionFactoryCreateRequest request) throws Exception
 	{
-		int nodeCount = 1;
-		boolean isWindows = false;
-		
-		logger.info("Creating hp cloud request");
+		int nodeCount = 1;		logger.info("Creating hp cloud request");
 		HPCloudCreateServerRequest hpCloudRequest = new HPCloudCreateServerRequest();
 		
 		logger.info("Setting parameters");
@@ -248,9 +245,6 @@ public class VirtualServerResource {
 			}
 		}
 		
-		// Detect a windows image
-		isWindows = isWindows(request.accessKey, request.encryptedSecret, hpCloudRequest.locationId, hpCloudRequest.imageRef);
-		
 		hpCloudRequest.nodeCount 	= nodeCount;
 		hpCloudRequest.serverName 	= request.name;
 		logger.info("Creating zombie");
@@ -274,8 +268,7 @@ public class VirtualServerResource {
 			siblings 			= new ArrayList<String>(1);
 			virtualServerList 	= new ArrayList<VirtualServer>(1);
 			
-			temporaryVirtualServer.setWindows(isWindows);
-			
+					
 			virtualServerList.	add(temporaryVirtualServer);
 			virtualMachinesRefs.add(temporaryVirtualServer.getUri());
 		}
@@ -294,7 +287,6 @@ public class VirtualServerResource {
 														request.encryptedSecret, request.owner, request.idempotencyKey);
 				virtualServer.setCreated(epoch);
 				virtualServer.setInstanceId(server.getId());
-				virtualServer.setWindows(isWindows);
 				logger.info("Created new VirtualServer: " + virtualServer.getUri());
 				add(virtualServer);
 				logger.info("Added new VirtualServer: " + virtualServer.getUri());
@@ -1111,18 +1103,7 @@ public class VirtualServerResource {
 		sendSecurityGroupNotificationEmail(sg.getName(), to, firstName, lastName, location);
 
 		return true;
-	}
-	
-	protected boolean isWindows(String id, String secret, String locationId, String imageId)
-	{
-		HPCloudManager hpCloudManager 	= getNewHPCloudManager(id, secret);
-		Image image 				= hpCloudManager.getImageById(locationId, imageId);
-		
-		if( image.getName().contains("Windows") )
-			return true;
-		
-		return false;
-	}
+	}	
 	
 	protected HPCloudCredentials getNewHPCredentials(String identity, String secretKey)
 	{
