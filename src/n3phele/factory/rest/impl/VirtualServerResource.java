@@ -191,7 +191,6 @@ public class VirtualServerResource {
 	public Response create(ExecutionFactoryCreateRequest r) throws Exception
 	{
 		int nodeCount = 1;
-		boolean windows = false;
 		logger.info("Creating hp cloud request");
 		HPCloudCreateServerRequest hpcRequest = new HPCloudCreateServerRequest();
 		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(r.accessKey, r.encryptedSecret));
@@ -245,9 +244,7 @@ public class VirtualServerResource {
 			}
 		}
 		
-		// Detect a windows image
-		windows = isWindows(r.accessKey, r.encryptedSecret, hpcRequest.locationId, hpcRequest.imageRef);
-		
+				
 		hpcRequest.nodeCount = nodeCount;
 		hpcRequest.serverName = r.name;
 		logger.info("Creating zombie");
@@ -268,8 +265,7 @@ public class VirtualServerResource {
 			siblings 	= new ArrayList<String>(1);
 			vsList 		= new ArrayList<VirtualServer>(1);
 			
-			temp.setWindows(windows);
-			
+					
 			vsList.add(temp);
 			vmRefs.add(temp.getUri());
 		}
@@ -285,7 +281,6 @@ public class VirtualServerResource {
 				VirtualServer item = new VirtualServer(srv.getName(), r.description, r.location, r.parameters, r.notification, r.accessKey, r.encryptedSecret, r.owner, r.idempotencyKey);
 				item.setCreated(epoch);
 				item.setInstanceId(srv.getId());
-				item.setWindows(windows);
 				logger.info("Created new VirtualServer: "+item.getUri());
 				add(item);
 				logger.info("Added new VirtualServer: "+item.getUri());
@@ -1107,18 +1102,7 @@ public class VirtualServerResource {
 		sendSecurityGroupNotificationEmail(sg.getName(), to, firstName, lastName, location);
 
 		return true;
-	}
-	
-	protected boolean isWindows(String id, String secret, String locationId, String imageId)
-	{
-		HPCloudManager hpcManager 	= new HPCloudManager(getHPCredentials(id, secret));
-		Image image 				= hpcManager.getImageById(locationId, imageId);
-		
-		if( image.getName().contains("Windows") )
-			return true;
-		
-		return false;
-	}
+	}	
 	
 	protected HPCloudCredentials getHPCredentials(String identity, String secretKey)
 	{
