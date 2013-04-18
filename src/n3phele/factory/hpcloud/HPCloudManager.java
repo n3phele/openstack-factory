@@ -1,24 +1,15 @@
 package n3phele.factory.hpcloud;
 
-import static org.jclouds.compute.config.ComputeServiceProperties.TIMEOUT_SCRIPT_COMPLETE;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
-import n3phele.factory.rest.impl.VirtualServerResource;
-
-import org.jclouds.ContextBuilder;
 import org.jclouds.compute.ComputeService;
-import org.jclouds.compute.ComputeServiceContext;
 import org.jclouds.compute.domain.ComputeMetadata;
 import org.jclouds.compute.domain.Hardware;
 import org.jclouds.domain.Location;
-import org.jclouds.gae.config.AsyncGoogleAppEngineConfigurationModule;
-import org.jclouds.logging.slf4j.config.SLF4JLoggingModule;
 import org.jclouds.openstack.nova.v2_0.NovaApi;
 import org.jclouds.openstack.nova.v2_0.domain.Image;
 import org.jclouds.openstack.nova.v2_0.domain.Ingress;
@@ -33,25 +24,17 @@ import org.jclouds.openstack.nova.v2_0.extensions.SecurityGroupApi;
 import org.jclouds.openstack.nova.v2_0.features.ImageApi;
 import org.jclouds.openstack.nova.v2_0.features.ServerApi;
 import org.jclouds.openstack.nova.v2_0.options.CreateServerOptions;
-import org.jclouds.rest.RestContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.FluentIterable;
-import com.google.common.collect.ImmutableSet;
-import com.google.inject.Module;
 
 /**
  * @author Alexandre Leites
  * 
  */
 public class HPCloudManager {
-	private ComputeService	mCompute;
-	private RestContext		mNova;
-	private NovaApi			mNovaApi;
-
 	public static String	JCLOUD_PROVIDER	= "hpcloud-compute";
-	final Logger logger = LoggerFactory.getLogger(HPCloudManager.class);
+	
+	private ComputeService mCompute;
+	private NovaApi mNovaApi;
 
 	/**
 	 * @param creds
@@ -59,46 +42,19 @@ public class HPCloudManager {
 	 */
 	public HPCloudManager(HPCloudCredentials creds)
 	{
-		initComputeService(creds.getIdentity(), creds.getSecretKey());
+		CloudFactory jCloudCompute = new JCloudComputeFactory();
+		jCloudCompute.initComputeService(creds.getIdentity(), creds.getSecretKey());
 		
-		
+		mCompute = jCloudCompute.getCompute();
+		mNovaApi = jCloudCompute.getNovaApi();
 	}
-
-	/**
-	 * @param identity
-	 *            A join of TenantName and AccessKey with a ":" between them.
-	 * @param secretKey
-	 *            A key associated with AccessKey provided in identity
-	 *            parameter.
-	 */
-	private void initComputeService(String identity, String secretKey)
+	
+	public HPCloudManager(HPCloudCredentials creds, ComputeService compute, NovaApi novaApi)
 	{
-		Properties properties = new Properties();
-		long scriptTimeout = TimeUnit.MILLISECONDS.convert(20, TimeUnit.MINUTES);
-		properties.setProperty(TIMEOUT_SCRIPT_COMPLETE, scriptTimeout + "");
-		properties.setProperty("jclouds.modules","org.jclouds.gae.config.AsyncGoogleAppEngineConfigurationModule");
-		properties.setProperty("jclouds.keystone.credential-type", "apiAccessKeyCredentials");
-
-		Iterable<Module> modules = ImmutableSet.<Module> of(new SLF4JLoggingModule(), new AsyncGoogleAppEngineConfigurationModule());
-
-		ContextBuilder builder = ContextBuilder.newBuilder(JCLOUD_PROVIDER).credentials(identity, secretKey).modules(modules).overrides(properties);
-
-		ComputeServiceContext context = builder.buildView(ComputeServiceContext.class);
-
-		mCompute = context.getComputeService();
-		mNova = context.unwrap();
-		mNovaApi = (NovaApi) mNova.getApi();
+		this.mCompute = compute;
+		this.mNovaApi = novaApi;
 	}
-
-	/**
-	 * @return list of available images into HP Cloud provider. This includes
-	 *         user custom images too.
-	 */
-	/*public Set<? extends Image> listImages()
-	{
-		return mCompute.listImages();
-	}*/
-
+	
 	/**
 	 * @return list of available hardware profiles (flavors) into HP Cloud
 	 *         provider.
@@ -213,33 +169,9 @@ public class HPCloudManager {
 		/**
 		 * Get server async api
 		 */
-		ServerApi serverApi = mNovaApi.getServerApiForZone(r.locationId);
+		ServerApi serverApi = getServerApi(r);
 		
-		/**
-		 * Create our security group with following ports opened: TCP: 22, 8887
-		 * UDP: None ICMP: Yes
-		 */
-		SecurityGroup secGroup = createSecurityGroup(r.security_groups, r.locationId);
-		
-		/**
-		 * Create our keypair. Return existent keypair if already exists.
-		 */
-		KeyPair keyPair = createKeyPair(r.keyName, r.locationId);
-		
-		/**
-		 * Build our server creation options.
-		 */
-		CreateServerOptions options = new CreateServerOptions();
-		options.securityGroupNames(secGroup.getName());
-		options.keyPairName(keyPair.getName());
-		
-		/**
-		 * Custom commands
-		 */
-		if(r.user_data!= null){
-			if( r.user_data.length() > 0 )
-				options.userData(r.user_data.getBytes());
-		}
+		CreateServerOptions options = buildCreateServerOptions(r);
 		
 		/**
 		 * Append n3phele prefix
@@ -267,6 +199,40 @@ public class HPCloudManager {
 		}
 
 		return (serversList.size() > 0) ? serversList : null;
+	}
+
+	protected ServerApi getServerApi(HPCloudCreateServerRequest r) {
+		return mNovaApi.getServerApiForZone(r.locationId);
+	}
+
+	protected CreateServerOptions buildCreateServerOptions(
+			HPCloudCreateServerRequest r) {
+		/**
+		 * Create our security group with following ports opened: TCP: 22, 8887
+		 * UDP: None ICMP: Yes
+		 */
+		SecurityGroup secGroup = createSecurityGroup(r.security_groups, r.locationId);
+		
+		/**
+		 * Create our keypair. Return existent keypair if already exists.
+		 */
+		KeyPair keyPair = createKeyPair(r.keyName, r.locationId);
+		
+		/**
+		 * Build our server creation options.
+		 */
+		CreateServerOptions options = new CreateServerOptions();
+		options.securityGroupNames(secGroup.getName());
+		options.keyPairName(keyPair.getName());
+		
+		/**
+		 * Custom commands
+		 */
+		if(r.user_data!= null){
+			if( r.user_data.length() > 0 )
+				options.userData(r.user_data.getBytes());
+		}
+		return options;
 	}
 	
 	/**
