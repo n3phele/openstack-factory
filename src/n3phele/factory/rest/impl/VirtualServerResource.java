@@ -109,7 +109,9 @@ public class VirtualServerResource {
 	public String accountTest(@DefaultValue("false") @FormParam("fix") Boolean fix, @FormParam("id") String id, @FormParam("secret") String secret, @FormParam("key") String key, @FormParam("location") URI location, @FormParam("locationId") String locationId, @FormParam("email") String email, @FormParam("firstName") String firstName, @FormParam("lastName") String lastName, @FormParam("securityGroup") String security_groups)
 	{
 		logger.info("accountTest with fix " + fix);
-		if (fix && (email == null || email.trim().length() == 0) || (firstName == null || firstName.trim().length() == 0) || (lastName == null || lastName.trim().length() == 0))
+		if (fix && 	(email == null || email.trim().length() == 0) 			||
+					(firstName == null || firstName.trim().length() == 0) 	||
+					(lastName == null || lastName.trim().length() == 0))
 			throw new IllegalArgumentException("email details must be supplied with option to fix");
 		
 		boolean resultKey = checkKey(key, id, secret, location, locationId);
@@ -177,7 +179,7 @@ public class VirtualServerResource {
 
 	/** create one or more new virtual servers. When multiple virtual servers are created, the siblings field of the virtualServer
 	 * object contains the URIs of all created virtual servers including that virtual server itself. 
-	 * @param r vm request information
+	 * @param request vm request information
 	 * @return URI of the first created virtual server. 
 	 * @throws Exception
 	 * @see ExecutionFactoryCreateRequest
@@ -188,19 +190,18 @@ public class VirtualServerResource {
 	@Produces("application/json")
 	@RolesAllowed("authenticated")
 	@Path("virtualServer")
-	public Response create(ExecutionFactoryCreateRequest r) throws Exception
+	public Response create(ExecutionFactoryCreateRequest request) throws Exception
 	{
-		int nodeCount = 1;
-		logger.info("Creating hp cloud request");
-		HPCloudCreateServerRequest hpcRequest = new HPCloudCreateServerRequest();
-		HPCloudManager hpcManager = new HPCloudManager(new HPCloudCredentials(r.accessKey, r.encryptedSecret));
+		int nodeCount = 1;		logger.info("Creating hp cloud request");
+		HPCloudCreateServerRequest hpCloudRequest = new HPCloudCreateServerRequest();
+		
 		logger.info("Setting parameters");
-		for (NameValue p : r.parameters)
+		for (NameValue parameter : request.parameters)
 		{
-			logger.info("Paramater: "+p.getKey()+" ,value: "+p.getValue());
-			if (p.getKey().equalsIgnoreCase("nodeCount"))
+			logger.info("Paramater: "+parameter.getKey()+" ,value: "+parameter.getValue());
+			if (parameter.getKey().equalsIgnoreCase("nodeCount"))
 			{
-				String value = p.getValue();
+				String value = parameter.getValue();
 				try
 				{
 					nodeCount = Integer.valueOf(value);
@@ -209,99 +210,104 @@ public class VirtualServerResource {
 				} catch (Exception e){}
 			}
 			
-			if (p.getKey().equalsIgnoreCase("imageRef"))
+			if (parameter.getKey().equalsIgnoreCase("imageRef"))
 			{
-				hpcRequest.imageRef = p.getValue();
+				hpCloudRequest.imageRef = parameter.getValue();
 			}
 
-			if (p.getKey().equalsIgnoreCase("flavorRef"))
+			if (parameter.getKey().equalsIgnoreCase("flavorRef"))
 			{
-				hpcRequest.flavorRef = p.getValue();
+				hpCloudRequest.flavorRef = parameter.getValue();
 			}
 			
-			if (p.getKey().equalsIgnoreCase("security_groups"))
+			if (parameter.getKey().equalsIgnoreCase("security_groups"))
 			{
-				hpcRequest.security_groups = p.getValue();
+				hpCloudRequest.security_groups = parameter.getValue();
 			}
 
-			if (p.getKey().equalsIgnoreCase("user_data"))
+			if (parameter.getKey().equalsIgnoreCase("user_data"))
 			{
-				String data = p.getValue();
+				String data = parameter.getValue();
 				if( Base64.isBase64(data) )
-					hpcRequest.user_data = new String( Base64.decode(data) );
+					hpCloudRequest.user_data = new String( Base64.decode(data) );
 				else
-					hpcRequest.user_data = data;
+					hpCloudRequest.user_data = data;
 			}
 			
-			if (p.getKey().equalsIgnoreCase("locationId"))
+			if (parameter.getKey().equalsIgnoreCase("locationId"))
 			{
-				hpcRequest.locationId = p.getValue();
+				hpCloudRequest.locationId = parameter.getValue();
 			}
 			
-			if (p.getKey().equalsIgnoreCase("key_name"))
+			if (parameter.getKey().equalsIgnoreCase("key_name"))
 			{
-				hpcRequest.keyName = p.getValue();
+				hpCloudRequest.keyName = parameter.getValue();
 			}
 		}
 		
-				
-		hpcRequest.nodeCount = nodeCount;
-		hpcRequest.serverName = r.name;
+		hpCloudRequest.nodeCount 	= nodeCount;
+		hpCloudRequest.serverName 	= request.name;
 		logger.info("Creating zombie");
 		/**
 		 * We're creating a temporary VirtualServer item to call createWithZombie method if we're creating just one machine.
 		 * If zombie is created with success, they'll just initialize the ArrayLists.
 		 */
-		Date epoch 						= new Date();
-		List<URI> vmRefs 				= null;
-		ArrayList<String> siblings 		= null;
-		ArrayList<VirtualServer> vsList = null;
-		VirtualServer temp 				= new VirtualServer(r.name, r.description, r.location, r.parameters, r.notification, r.accessKey, r.encryptedSecret, r.owner, r.idempotencyKey);
+		Date epoch									= new Date();
+		List<URI> virtualMachinesRefs				= null;
+		ArrayList<String> siblings 					= null;
+		ArrayList<VirtualServer> virtualServerList	= null;
 		
-		if( nodeCount == 1 && createWithZombie(temp) )
+		VirtualServer temporaryVirtualServer = new VirtualServer(request.name, request.description, request.location, request.parameters,
+															request.notification, request.accessKey, request.encryptedSecret,
+															request.owner, request.idempotencyKey);
+		
+		if( nodeCount == 1 && createWithZombie(temporaryVirtualServer) )
 		{
 			logger.info("Only one zombie vs");
-			vmRefs 		= new ArrayList<URI>(1);
-			siblings 	= new ArrayList<String>(1);
-			vsList 		= new ArrayList<VirtualServer>(1);
+			virtualMachinesRefs = new ArrayList<URI>(1);
+			siblings 			= new ArrayList<String>(1);
+			virtualServerList 	= new ArrayList<VirtualServer>(1);
 			
 					
-			vsList.add(temp);
-			vmRefs.add(temp.getUri());
+			virtualServerList.	add(temporaryVirtualServer);
+			virtualMachinesRefs.add(temporaryVirtualServer.getUri());
 		}
 		else
 		{
-			List<ServerCreated> resultList = hpcManager.createServerRequest(hpcRequest);
-			vmRefs 		= new ArrayList<URI>(resultList.size());
-			siblings 	= new ArrayList<String>(resultList.size());
-			vsList 		= new ArrayList<VirtualServer>(resultList.size());
+			HPCloudManager hpCloudManager 			= getNewHPCloudManager(request.accessKey, request.encryptedSecret);
+			List<ServerCreated> resultServerList	= hpCloudManager.createServerRequest(hpCloudRequest);
+			virtualMachinesRefs 					= new ArrayList<URI>(resultServerList.size());
+			siblings 								= new ArrayList<String>(resultServerList.size());
+			virtualServerList 						= new ArrayList<VirtualServer>(resultServerList.size());
 			
-			for (ServerCreated srv : resultList)
+			for (ServerCreated server : resultServerList)
 			{
-				VirtualServer item = new VirtualServer(srv.getName(), r.description, r.location, r.parameters, r.notification, r.accessKey, r.encryptedSecret, r.owner, r.idempotencyKey);
-				item.setCreated(epoch);
-				item.setInstanceId(srv.getId());
-				logger.info("Created new VirtualServer: "+item.getUri());
-				add(item);
-				logger.info("Added new VirtualServer: "+item.getUri());
-				vsList.add(item);
-				vmRefs.add(item.getUri());
+				VirtualServer virtualServer = new VirtualServer(server.getName(), request.description, request.location,
+														request.parameters, request.notification, request.accessKey,
+														request.encryptedSecret, request.owner, request.idempotencyKey);
+				virtualServer.setCreated(epoch);
+				virtualServer.setInstanceId(server.getId());
+				logger.info("Created new VirtualServer: " + virtualServer.getUri());
+				add(virtualServer);
+				logger.info("Added new VirtualServer: " + virtualServer.getUri());
+				virtualServerList.add(virtualServer);
+				virtualMachinesRefs.add(virtualServer.getUri());
 			}
 		}
 		
-		for(VirtualServer s : vsList)
+		for(VirtualServer virtualServer : virtualServerList)
 		{
-			siblings.add(s.getUri().toString());
+			siblings.add(virtualServer.getUri().toString());
 		}
 		
-		for(VirtualServer s : vsList)
+		for(VirtualServer virtualServer : virtualServerList)
 		{
-			s.setSiblings(siblings);
+			virtualServer.setSiblings(siblings);
 			logger.info("updating");
-			update(s);
+			update(virtualServer);
 		}
 		logger.info("Created new VirtualServer");
-		return Response.created(vsList.get(0).getUri()).entity(new CreateVirtualServerResponse(vmRefs)).build();
+		return Response.created(virtualServerList.get(0).getUri()).entity(new CreateVirtualServerResponse(virtualMachinesRefs)).build();
 	}
 
 	/** Get details of a specific virtual server. This operation does a deep get, getting information from the cloud before
@@ -312,7 +318,7 @@ public class VirtualServerResource {
 	 */
 	@GET
 	@Produces({ "application/json",
-			"application/vnd.com.n3phele.VirtualServer+json" })
+				"application/vnd.com.n3phele.VirtualServer+json" })
 	@Path("virtualServer/{id}")
 	@RolesAllowed("authenticated")
 	public VirtualServer get(@PathParam("id") Long id) throws NotFoundException
@@ -406,39 +412,38 @@ public class VirtualServerResource {
 		}
 	}
 	
-	private void makeZombie(VirtualServer item) throws Exception
+	private void makeZombie(VirtualServer virtualServer) throws Exception
 	{
-		String instanceId = item.getInstanceId();
+		String instanceId = virtualServer.getInstanceId();
 		try
 		{
-			HPCloudCredentials credentials = new HPCloudCredentials(item.getAccessKey(), item.getEncryptedKey());
-			HPCloudManager hpcManager = new HPCloudManager(credentials);
-			item.setInstanceId(null);
-			item.setZombie(true);
-			updateStatus(item, VirtualServerStatus.terminated);
-			update(item);
+			HPCloudManager hpCloudManager = getNewHPCloudManager(virtualServer.getAccessKey(), virtualServer.getEncryptedKey());
+			virtualServer.setInstanceId(null);
+			virtualServer.setZombie(true);
+			updateStatus(virtualServer, VirtualServerStatus.terminated);
+			update(virtualServer);
 
 			/**
 			 * Now we're using metadata to set instance behavior (zombie or debug)
 			 */
-			String locationId = getLocationId(item);
+			String locationId = getLocationId(virtualServer);
 			Map<String, String> tags = new HashMap<String, String>();
-			tags.put("n3phele-name", item.getName());
+			tags.put("n3phele-name", virtualServer.getName());
 			tags.put("n3phele-behavior", "zombie");
 			tags.put("n3phele-factory", Resource.get("factoryName", FACTORY_NAME));
 			tags.put("n3phele-uri", "");
 
-			hpcManager.putServerTags(item.getInstanceId(), locationId, tags);
+			hpCloudManager.putServerTags(virtualServer.getInstanceId(), locationId, tags);
 			
-			hpcManager.rebootNode(locationId, item.getInstanceId(), RebootType.SOFT);
+			hpCloudManager.rebootNode(locationId, virtualServer.getInstanceId(), RebootType.SOFT);
 
 			/**
 			 * Create a new zombie virtualServer object, and then set item
 			 * instance Id to null. Update item. Update status.
 			 */
-			VirtualServer clone = new VirtualServer("zombie", item.getDescription(), item.getLocation(), item.getParameters(), null, item.getAccessKey(), item.getEncryptedKey(), item.getOwner(), item.getIdempotencyKey());
-			clone.setCreated(item.getCreated());
-			clone.setInstanceId(instanceId);
+			VirtualServer cloneZombie = new VirtualServer("zombie", virtualServer.getDescription(), virtualServer.getLocation(), virtualServer.getParameters(), null, virtualServer.getAccessKey(), virtualServer.getEncryptedKey(), virtualServer.getOwner(), virtualServer.getIdempotencyKey());
+			cloneZombie.setCreated(virtualServer.getCreated());
+			cloneZombie.setInstanceId(instanceId);
 
 			/**
 			 * The add operation does two writes in order to fix the reference
@@ -450,54 +455,53 @@ public class VirtualServerResource {
 			 * store, and the check and write wrapped in
 			 * a transaction.
 			 */
-			add(clone);
+			add(cloneZombie);
 		} catch (Exception e)
 		{
 			logger.error("makeZombie delete of instanceId " + instanceId, e);
-			deleteInstance(item);
+			deleteInstance(virtualServer);
 			throw e;
 		}
 
 	}
 	
-	private void makeDebug(VirtualServer item) throws Exception
+	private void makeDebug(VirtualServer virtualServer) throws Exception
 	{
-		String instanceId = item.getInstanceId();
+		String instanceId = virtualServer.getInstanceId();
 		try
 		{
-			HPCloudCredentials credentials = new HPCloudCredentials(item.getAccessKey(), item.getEncryptedKey());
-			HPCloudManager hpcManager = new HPCloudManager(credentials);
-			item.setInstanceId(null);
-			item.setZombie(true);
-			updateStatus(item, VirtualServerStatus.terminated);
-			update(item);
+			HPCloudManager hpCloudManager = getNewHPCloudManager(virtualServer.getAccessKey(), virtualServer.getEncryptedKey());
+			virtualServer.setInstanceId(null);
+			virtualServer.setZombie(true);
+			updateStatus(virtualServer, VirtualServerStatus.terminated);
+			update(virtualServer);
 
 			/**
 			 * Now we're using metadata to set instance behavior (zombie or debug)
 			 */
-			String locationId = getLocationId(item);
+			String locationId = getLocationId(virtualServer);
 			Map<String, String> tags = new HashMap<String, String>();
-			tags.put("n3phele-name", item.getName());
+			tags.put("n3phele-name", virtualServer.getName());
 			tags.put("n3phele-behavior", "debug");
 			tags.put("n3phele-factory", Resource.get("factoryName", FACTORY_NAME));
 			tags.put("n3phele-uri", "");
 
-			hpcManager.putServerTags(item.getInstanceId(), locationId, tags);
+			hpCloudManager.putServerTags(virtualServer.getInstanceId(), locationId, tags);
 
 			/**
 			 * Create a new zombie virtualServer object, and then set item
 			 * instance Id to null. Update item. Update status.
 			 */
-			VirtualServer clone = new VirtualServer("debug", item.getDescription(), item.getLocation(), item.getParameters(), null, item.getAccessKey(), item.getEncryptedKey(), item.getOwner(), item.getIdempotencyKey());
-			clone.setCreated(item.getCreated());
+			VirtualServer clone = new VirtualServer("debug", virtualServer.getDescription(), virtualServer.getLocation(), virtualServer.getParameters(), null, virtualServer.getAccessKey(), virtualServer.getEncryptedKey(), virtualServer.getOwner(), virtualServer.getIdempotencyKey());
+			clone.setCreated(virtualServer.getCreated());
 			clone.setInstanceId(instanceId);
 
 			add(clone);
 		} catch (Exception e)
 		{
 			logger.error("makeDebug delete of instanceId "	+ instanceId, e);
-			item.setInstanceId(instanceId);
-			deleteInstance(item);
+			virtualServer.setInstanceId(instanceId);
+			deleteInstance(virtualServer);
 			throw e;
 		}
 	}
@@ -550,38 +554,37 @@ public class VirtualServerResource {
 
 	protected VirtualServer deepGet(Long id) throws NotFoundException
 	{
-		VirtualServer s = load(id);
-		logger.info("Virtual Server retrieved: "+s.getInstanceId());
-		updateVirtualServer(s);
-		return s;
+		VirtualServer virtualServer = load(id);
+		logger.info("Virtual Server retrieved: "+virtualServer.getInstanceId());
+		updateVirtualServer(virtualServer);
+		return virtualServer;
 	}
 	
 	/** Updates virtual server object and data store state
-	 * @param item object to update
+	 * @param virtualServer object to update
 	 */
-
-	protected void updateVirtualServer(VirtualServer item) throws IllegalArgumentException
+	protected void updateVirtualServer(VirtualServer virtualServer) throws IllegalArgumentException
 	{
-		HPCloudManager hpcManager = getHPCloudManager(item.getAccessKey(), item.getEncryptedKey());
-		String instanceId = item.getInstanceId();
-		boolean madeIntoZombie = item.isZombie();
+		HPCloudManager hpCloudManager = getNewHPCloudManager(virtualServer.getAccessKey(), virtualServer.getEncryptedKey());
+		String instanceId = virtualServer.getInstanceId();
+		boolean madeIntoZombie = virtualServer.isZombie();
 
 		if (madeIntoZombie)
 		{
-			if (updateStatus(item, VirtualServerStatus.terminated))
-				update(item);
+			if (updateStatus(virtualServer, VirtualServerStatus.terminated))
+				update(virtualServer);
 			
-			if (item.getStatus().equals("terminated"))
+			if (virtualServer.getStatus().equals("terminated"))
 			{
-				logger.warn("Instance " + item.getName() + " terminated .. purging");
-				delete(item);
+				logger.warn("Instance " + virtualServer.getName() + " terminated .. purging");
+				delete(virtualServer);
 				return;
 			}
 		} else if (instanceId != null && instanceId.length() > 0)
 		{
-			String locationId = getLocationId(item);
+			String locationId = getLocationId(virtualServer);
 			
-			Server s = hpcManager.getServerById(locationId, item.getInstanceId());
+			Server s = hpCloudManager.getServerById(locationId, virtualServer.getInstanceId());
 			if (s != null)
 			{
 				VirtualServerStatus currentStatus = mapStatus(s);	
@@ -590,19 +593,19 @@ public class VirtualServerResource {
 				 * If the statuses are different, and the current cloud status
 				 * is ACTIVE (Running), we should update.
 				 */
-				if (!item.getStatus().equals(currentStatus) && currentStatus.equals(VirtualServerStatus.running)) 
+				if (!virtualServer.getStatus().equals(currentStatus) && currentStatus.equals(VirtualServerStatus.running)) 
 				{
 					Map<String, String> tags = new HashMap<String, String>();
-					tags.put("n3phele-name", item.getName());
+					tags.put("n3phele-name", virtualServer.getName());
 					tags.put("n3phele-factory", Resource.get("factoryName", FACTORY_NAME));
-					tags.put("n3phele-uri", item.getUri().toString());
-					hpcManager.putServerTags(item.getInstanceId(), locationId, tags);
-					item.setOutputParameters(HPCloudExtractor.extract(s));		
+					tags.put("n3phele-uri", virtualServer.getUri().toString());
+					hpCloudManager.putServerTags(virtualServer.getInstanceId(), locationId, tags);
+					virtualServer.setOutputParameters(HPCloudExtractor.extract(s));		
 				}
 				
 				String publicIP = "";
 				String privateIP = "";
-				ArrayList<NameValue> params = item.getOutputParameters();
+				ArrayList<NameValue> params = virtualServer.getOutputParameters();
 				for(NameValue p : params)
 				{
 					if(p.getKey().equalsIgnoreCase("publicIpAddress" ))
@@ -620,32 +623,33 @@ public class VirtualServerResource {
 				if(!(publicIP.equalsIgnoreCase(privateIP)))
 				{
 					logger.warn("IP public is set, updating vs");
-					if (updateStatus(item, currentStatus))
-						update(item);
+					if (updateStatus(virtualServer, currentStatus))
+						update(virtualServer);
 				}
 
-				if (item.getStatus().equals(VirtualServerStatus.terminated))
+				if (virtualServer.getStatus().equals(VirtualServerStatus.terminated))
 				{
-					logger.warn("Instance " + item.getInstanceId() + " terminated .. purging");
-					delete(item);
+					logger.warn("Instance " + virtualServer.getInstanceId() + " terminated .. purging");
+					delete(virtualServer);
 					return;
 				}
 			} else
 			{
-				logger.warn("Instance " + item.getInstanceId() + " not found, assumed terminated .. purging");
-				delete(item);
+				logger.warn("Instance " + virtualServer.getInstanceId() + " not found, assumed terminated .. purging");
+				delete(virtualServer);
 				return;
 			}
 		}
 	}
 	
-	private VirtualServerStatus mapStatus(Server s)
+	private VirtualServerStatus mapStatus(Server server)
 	{	
-		if( s.getStatus().toString().compareTo("ACTIVE")==0 )
+		if( server.getStatus().toString().equals("ACTIVE") )
 		{
 			return VirtualServerStatus.running;
 		}
-		else if( s.getStatus().toString().compareTo("BUILD")==0 || s.getStatus().toString().compareTo("REBUILD")==0 || s.getStatus().toString().compareTo("REBOOT")==0 || s.getStatus().toString().compareTo("HARD_REBOOT")==0)
+		else if(server.getStatus().toString().equals("BUILD")  || server.getStatus().toString().equals("REBUILD") ||
+				server.getStatus().toString().equals("REBOOT") || server.getStatus().toString().equals("HARD_REBOOT"))
 		{
 			return VirtualServerStatus.initializing;
 		}
@@ -655,16 +659,16 @@ public class VirtualServerResource {
 		}
 	}
 	
-	private String getLocationId(VirtualServer item)
+	private String getLocationId(VirtualServer virtualServer)
 	{
-		ArrayList<NameValue> listParameters = item.getParameters();
+		ArrayList<NameValue> listParameters = virtualServer.getParameters();
 		String locationId = null;
 
-		for (NameValue p : listParameters)
+		for (NameValue parameter : listParameters)
 		{
-			if (p.getKey().equalsIgnoreCase("locationId"))
+			if (parameter.getKey().equalsIgnoreCase("locationId"))
 			{
-				locationId = p.getValue();
+				locationId = parameter.getValue();
 				break;
 			}
 		}
@@ -673,108 +677,106 @@ public class VirtualServerResource {
 	}
 
 
-	protected void refreshVirtualServer(VirtualServer item)
+	protected void refreshVirtualServer(VirtualServer virtualServer)
 	{
-		if (item == null)
+		if (virtualServer == null)
 			return;
 
-		HPCloudManager hpcManager = getHPCloudManager(item.getAccessKey(), item.getEncryptedKey());
+		HPCloudManager hpCloudManager = getNewHPCloudManager(virtualServer.getAccessKey(), virtualServer.getEncryptedKey());
 
-		String locationId = getLocationId(item);
+		String locationId = getLocationId(virtualServer);
 
-		Server s = hpcManager.getServerById(locationId, item.getInstanceId());
+		Server s = hpCloudManager.getServerById(locationId, virtualServer.getInstanceId());
 		if (s != null)
 		{
 			VirtualServerStatus currentStatus = mapStatus(s);
-			item.setStatus(currentStatus);
+			virtualServer.setStatus(currentStatus);
 		} else
 		{
-			logger.warn("Instance " + item.getInstanceId() + " not found, assumed terminated ..");
-			item.setStatus(VirtualServerStatus.terminated);
+			logger.warn("Instance " + virtualServer.getInstanceId() + " not found, assumed terminated ..");
+			virtualServer.setStatus(VirtualServerStatus.terminated);
 		}
 	}
 	
 	/** Check if a zombie has expired and clean up if it has
-	 * @param s virtual server
+	 * @param virtualsServer virtual server
 	 * @return TRUE if zombie
 	 */
-	private boolean checkForZombieExpiry(VirtualServer s)
+	private boolean checkForZombieExpiry(VirtualServer virtualServer)
 	{
 		/**
 		 * Double-checking if the VirtualServer is a zombie/debug machine.
 		 * We're checking the hpcloud tags AND the database name.
 		 */
-		boolean debugInstance = s.getName().equalsIgnoreCase("debug");
-		boolean zombieInstance = s.getName().equalsIgnoreCase("zombie");
-		ArrayList<NameValue> listParameters = s.getParameters();
+		boolean isDebugInstance = virtualServer.getName().equalsIgnoreCase("debug");
+		boolean isZombieInstance = virtualServer.getName().equalsIgnoreCase("zombie");
+		ArrayList<NameValue> listParameters = virtualServer.getParameters();
 		
-		for(NameValue p : listParameters)
+		for(NameValue parameter : listParameters)
 		{
-			if( p.getKey().equalsIgnoreCase("n3phele-behavior") )
+			if( parameter.getKey().equalsIgnoreCase("n3phele-behavior") )
 			{
-				if( p.getValue().equalsIgnoreCase("debug") )
-					debugInstance = true;
-				else if( p.getValue().equalsIgnoreCase("zombie") )
-					zombieInstance = true;
+				if( parameter.getValue().equalsIgnoreCase("debug") )
+					isDebugInstance = true;
+				else if( parameter.getValue().equalsIgnoreCase("zombie") )
+					isZombieInstance = true;
 				break;
 			}
 		}
 		
-		if(zombieInstance || debugInstance )
+		if(isZombieInstance || isDebugInstance )
 		{
-			HPCloudManager hpcManager = getHPCloudManager(s.getAccessKey(), s.getEncryptedKey());
+			HPCloudManager hpCloudManager = getNewHPCloudManager(virtualServer.getAccessKey(), virtualServer.getEncryptedKey());
 			
-			if( s.getStatus().equals(VirtualServerStatus.terminated) )
+			if( virtualServer.getStatus().equals(VirtualServerStatus.terminated) )
 			{
-				logger.info("Found dead "+s.getName()+" with id "+s.getInstanceId()+" created "+s.getCreated());
-				manager.delete(s);
+				logger.info("Found dead "+virtualServer.getName()+" with id "+virtualServer.getInstanceId()+" created "+virtualServer.getCreated());
+				manager.delete(virtualServer);
 				return true;
 			}
 			
-			long created = s.getCreated().getTime();
-			long now = new Date().getTime();
-			long age = ((now - created)% (60*60*1000))/60000;
+			long created	= virtualServer.getCreated().getTime();
+			long now 		= new Date().getTime();
+			long age 		= ((now - created)% (60*60*1000))/60000;
 			
-			if(age > 55 || !s.getStatus().equals(VirtualServerStatus.running) || debugInstance || zombieInstance )
+			if(age > 55 || !virtualServer.getStatus().equals(VirtualServerStatus.running) || isDebugInstance || isZombieInstance )
 			{
-				logger.info("Killing "+s.getName()+" with id "+s.getInstanceId()+" created "+s.getCreated());
-				s.setName(debugInstance? "debug" : "zombie");
-				update(s);
+				logger.info("Killing "+virtualServer.getName()+" with id "+virtualServer.getInstanceId()+" created "+virtualServer.getCreated());
+				virtualServer.setName(isDebugInstance? "debug" : "zombie");
+				update(virtualServer);
 				
-				String locationId = getLocationId(s);
-				hpcManager.terminateNode(locationId, s.getInstanceId());
+				String locationId = getLocationId(virtualServer);
+				hpCloudManager.terminateNode(locationId, virtualServer.getInstanceId());
 			}
 		}
 		return false;
 	}
 
-
-
-	protected HPCloudManager getHPCloudManager(String acessKey, String encryptedKey)
+	protected HPCloudManager getNewHPCloudManager(String acessKey, String encryptedKey)
 	{
-		HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(acessKey, encryptedKey));
-		return hpcManager;
+		HPCloudManager hpCloudManager = new HPCloudManager(getNewHPCredentials(acessKey, encryptedKey));
+		return hpCloudManager;
 	}
 
 	private Collection<BaseEntity> refreshCollection()
 	{
-		Collection<VirtualServer> servers = getCollection();
-		Collection<BaseEntity> result = servers.collection(true);
+		Collection<VirtualServer> servers	= getCollection();
+		Collection<BaseEntity> result 		= servers.collection(true);
 		try {
-			for (VirtualServer s : servers.getElements()) {
+			for (VirtualServer virtualServer : servers.getElements()) {
 	
 					try {
-						if(s.getUri() != null && !checkForZombieExpiry(s))
-							updateVirtualServer(s);
+						if(virtualServer.getUri() != null && !checkForZombieExpiry(virtualServer))
+							updateVirtualServer(virtualServer);
 					}
 					catch (Exception e) {
-						logger.warn(s.getUri()+" refresh failed. Killing..",e);
+						logger.warn(virtualServer.getUri()+" refresh failed. Killing..",e);
 						try {
-							terminate(s);
+							terminate(virtualServer);
 						} catch (Exception another) {
 							
 						} finally {
-							delete(s);
+							delete(virtualServer);
 						}
 					}
 			}
@@ -784,42 +786,41 @@ public class VirtualServerResource {
 		return result;
 	}
 
-	private void deleteInstance(VirtualServer item) throws Exception
+	private void deleteInstance(VirtualServer virtualServer) throws Exception
 	{
-		String instanceId = item.getInstanceId();
+		String instanceId = virtualServer.getInstanceId();
 		try
 		{
-			if (!item.getStatus().equals(VirtualServerStatus.terminated) && instanceId != null && instanceId.length() > 0)
+			if (!virtualServer.getStatus().equals(VirtualServerStatus.terminated) && instanceId != null && instanceId.length() > 0)
 			{
 
-				HPCloudCredentials credentials = new HPCloudCredentials(item.getAccessKey(), item.getEncryptedKey());
-				HPCloudManager hpManager = new HPCloudManager(credentials);
+				HPCloudManager hpManager = getNewHPCloudManager(virtualServer.getAccessKey(), virtualServer.getEncryptedKey());
 
-				String locationId = getLocationId(item);
+				String locationId = getLocationId(virtualServer);
 
 				if (locationId == null)
 				{
-					logger.error("locationId is null, cannot delete instance "	+ item.getInstanceId(), new IllegalArgumentException("locationId: null"));
+					logger.error("locationId is null, cannot delete instance "	+ virtualServer.getInstanceId(), new IllegalArgumentException("locationId: null"));
 					throw new IllegalArgumentException("locationId: null");
 				}
 
-				boolean result = hpManager.terminateNode(locationId, item.getInstanceId());
+				boolean isDeleted = hpManager.terminateNode(locationId, virtualServer.getInstanceId());
 
-				if (result)
+				if (isDeleted)
 				{
-					logger.warn("Instance " + item.getInstanceId() + "deleted");
-					if (updateStatus(item, VirtualServerStatus.terminated))
-						update(item);
+					logger.warn("Instance " + virtualServer.getInstanceId() + "deleted");
+					if (updateStatus(virtualServer, VirtualServerStatus.terminated))
+						update(virtualServer);
 					
 				} else
 				{
-					logger.warn("Instance " + item.getInstanceId() + "could not be deleted");
+					logger.warn("Instance " + virtualServer.getInstanceId() + "could not be deleted");
 				}
 			}
 			else
 			{
-				if (updateStatus(item, VirtualServerStatus.terminated))
-					update(item);
+				if (updateStatus(virtualServer, VirtualServerStatus.terminated))
+					update(virtualServer);
 			}
 
 		} catch (Exception e)
@@ -830,7 +831,7 @@ public class VirtualServerResource {
 
 	}
 	
-	protected boolean createWithZombie(VirtualServer item)
+	protected boolean createWithZombie(VirtualServer virtualServer)
 	{
 		logger.info("Entered createWithZombie");
 		List<VirtualServer> zombies = getZombie();
@@ -839,16 +840,16 @@ public class VirtualServerResource {
 			logger.info("Got " + zombies.size() + " Zombies ");
 			zombieCheck: for (VirtualServer s : zombies)
 			{
-				boolean locationMatch = s.getLocation().equals(item.getLocation());
-				boolean accessMatch = s.getAccessKey().equals(item.getAccessKey());
-				boolean secretMatch = s.getEncryptedKey().equals(item.getEncryptedKey());
+				boolean locationMatch = s.getLocation().equals(virtualServer.getLocation());
+				boolean accessMatch = s.getAccessKey().equals(virtualServer.getAccessKey());
+				boolean secretMatch = s.getEncryptedKey().equals(virtualServer.getEncryptedKey());
 				logger.info(" Zombie " + s.getInstanceId() + " location "+ locationMatch + " access " + accessMatch + " secret "+ secretMatch);
 				
 				logger.info(" locationMatch: " + locationMatch + " accessMatch: " + accessMatch + " secretMatch: " + secretMatch);
 				if (locationMatch && accessMatch && secretMatch)
 				{
 					Map<String, String> map = s.getParametersMap();
-					for (NameValue x : item.getParameters())
+					for (NameValue x : virtualServer.getParameters())
 					{
 						if (!SafeEquals(x.getValue(), map.get(x.getKey())))
 						{
@@ -890,11 +891,11 @@ public class VirtualServerResource {
 							terminate(s);
 							continue;
 						}
-						item.setInstanceId(s.getInstanceId());
-						item.setCreated(s.getCreated());
-						updateVirtualServer(item);
+						virtualServer.setInstanceId(s.getInstanceId());
+						virtualServer.setCreated(s.getCreated());
+						updateVirtualServer(virtualServer);
 						
-						if( item.getStatus().equals(VirtualServerStatus.running) )
+						if( virtualServer.getStatus().equals(VirtualServerStatus.running) )
 							return true;
 						else
 							continue; // There's no difference calling continue here, i think.
@@ -970,15 +971,15 @@ public class VirtualServerResource {
 
 	protected boolean checkKey(String key, String id, String secret, URI location, String locationId)
 	{
-		HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(id, secret));
+		HPCloudManager hpCloudManager = getNewHPCloudManager(id, secret);
 
-		return hpcManager.checkKeyPair(key, locationId);
+		return hpCloudManager.checkKeyPair(key, locationId);
 	}
 
 	protected boolean createKey(String key, String id, String secret, URI location, String email, String firstName, String lastName, String locationId)
 	{
-		HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(id, secret));
-		KeyPair newKey = hpcManager.createKeyPair(key, locationId);
+		HPCloudManager hpCloudManager = getNewHPCloudManager(id, secret);
+		KeyPair newKey = hpCloudManager.createKeyPair(key, locationId);
 
 		if (newKey != null)
 		{
@@ -1044,9 +1045,9 @@ public class VirtualServerResource {
 
 	protected boolean checkSecurityGroup(String groupName, String id, String secret, URI location, String locationId)
 	{
-		HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(id, secret));
+		HPCloudManager hpCloudManager = getNewHPCloudManager(id, secret);
 
-		return hpcManager.checkSecurityGroup(groupName, locationId);
+		return hpCloudManager.checkSecurityGroup(groupName, locationId);
 	}
 	
 	public void sendSecurityGroupNotificationEmail(String securityGroup, String to, String firstName, String lastName, URI location)
@@ -1096,15 +1097,15 @@ public class VirtualServerResource {
 	
 	protected boolean makeSecurityGroup(String groupName, String id, String secret, URI location, String to, String firstName, String lastName, String locationId)
 	{
-		HPCloudManager hpcManager = new HPCloudManager(getHPCredentials(id, secret));
+		HPCloudManager hpCloudManager = getNewHPCloudManager(id, secret);
 
-		SecurityGroup sg = hpcManager.createSecurityGroup(groupName, locationId);
+		SecurityGroup sg = hpCloudManager.createSecurityGroup(groupName, locationId);
 		sendSecurityGroupNotificationEmail(sg.getName(), to, firstName, lastName, location);
 
 		return true;
 	}	
 	
-	protected HPCloudCredentials getHPCredentials(String identity, String secretKey)
+	protected HPCloudCredentials getNewHPCredentials(String identity, String secretKey)
 	{
 		try
 		{

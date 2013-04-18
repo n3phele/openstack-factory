@@ -8,12 +8,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
-
-import javax.print.attribute.standard.Sides;
 import javax.ws.rs.core.UriBuilder;
-
-import n3phele.factory.hpcloud.HPCloudCredentials;
 import n3phele.factory.hpcloud.HPCloudManager;
 import n3phele.factory.model.ServiceModelDao;
 import n3phele.factory.rest.impl.VirtualServerResource;
@@ -30,7 +25,6 @@ import n3phele.service.model.core.VirtualServerStatus;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
@@ -235,7 +229,8 @@ public class VirtualServerResourceTest {
 		resource.kill(vs.getId(), false, false);		
 		
 		//If virtual server was deleted, this method throws an exception
-		VirtualServer virtualServer = manager.get(vs.getId());
+		VirtualServer virtualServer = manager.get(vs.getId());	
+				
 	}
 	
 	@Test
@@ -306,14 +301,12 @@ public class VirtualServerResourceTest {
 	public void checkForZombieExpiryTest() throws Exception
 	{
 		HPCloudManager manager = PowerMockito.mock(HPCloudManager.class);
-		HPCloudCredentials cred = PowerMockito.mock(HPCloudCredentials.class);
-		
-		Date now = new Date();
 		
 		VirtualServerResource virtualServerResource = PowerMockito.spy(new VirtualServerResource());
 		PowerMockito.doNothing().when(virtualServerResource, "update", Mockito.any());
-		PowerMockito.doReturn(cred).when(virtualServerResource, "getHPCredentials", Mockito.any(), Mockito.any());
-		PowerMockito.doReturn(manager).when(virtualServerResource, "getHPCloudManager", Mockito.any(), Mockito.any());
+		PowerMockito.doReturn(manager).when(virtualServerResource, "getNewHPCloudManager", Mockito.any(), Mockito.any());
+		
+		Date now = new Date();
 		
 		//vs1 is a zombie expired
 		VirtualServer vs1 = new VirtualServer("zombie", "desc01", new URI("http://location.com"), new ArrayList<NameValue>(), new URI("http://notification.com"), "accessKey", "encryptedSecret", new URI("http://owner.com"), "idempotencyKey");
@@ -336,16 +329,6 @@ public class VirtualServerResourceTest {
 		vs3.setCreated(now);
 		vs3.setId(03l);
 		
-		//vs7 is a zombie that is expired
-		VirtualServer vs7 = new VirtualServer("zombi3", "desc04", new URI("http://location.com"), new ArrayList<NameValue>(), new URI("http://notification.com"), "accessKey", "encryptedSecret", new URI("http://owner.com"), "idempotencyKey");
-		vs7.setStatus(VirtualServerStatus.terminated);
-		vs7.setInstanceId("instance07");
-		vs7.setCreated(now);
-		ArrayList<NameValue> p = new ArrayList<NameValue>();
-		p.add(new NameValue("n3phele-behavior", "zombie"));
-		vs7.setParameters(p);
-		vs7.setId(07l);
-		
 		//vs4 is a zombie that is not expired
 		VirtualServer vs4 = new VirtualServer("zombie", "desc05", new URI("http://location.com"), new ArrayList<NameValue>(), new URI("http://notification.com"), "accessKey", "encryptedSecret", new URI("http://owner.com"), "idempotencyKey");
 		vs4.setStatus(VirtualServerStatus.running);
@@ -364,6 +347,16 @@ public class VirtualServerResourceTest {
 		vs6.setStatus(VirtualServerStatus.running);
 		vs6.setCreated(now);
 		vs6.setId(06l);
+		
+		//vs7 is a zombie that is expired
+		VirtualServer vs7 = new VirtualServer("zombi3", "desc04", new URI("http://location.com"), new ArrayList<NameValue>(), new URI("http://notification.com"), "accessKey", "encryptedSecret", new URI("http://owner.com"), "idempotencyKey");
+		vs7.setStatus(VirtualServerStatus.terminated);
+		vs7.setInstanceId("instance07");
+		vs7.setCreated(now);
+		ArrayList<NameValue> p = new ArrayList<NameValue>();
+		p.add(new NameValue("n3phele-behavior", "zombie"));
+		vs7.setParameters(p);
+		vs7.setId(07l);
 		
 		assertEquals("vs1 should be a expired zombie", true, Whitebox.invokeMethod(virtualServerResource, "checkForZombieExpiry", vs1));
 		assertEquals("vs2 should be a expired debug", true, Whitebox.invokeMethod(virtualServerResource, "checkForZombieExpiry", vs2));
@@ -406,7 +399,7 @@ public class VirtualServerResourceTest {
 		}
 		
 		protected void delete (VirtualServer vs){
-			super.add(vs);
+			super.delete(vs);
 		}
 		
 		protected VirtualServer get(Long id){
