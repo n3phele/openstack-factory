@@ -257,11 +257,11 @@ public class VirtualServerResource {
 		ArrayList<String> siblings 					= null;
 		ArrayList<VirtualServer> virtualServerList	= null;
 		
-		VirtualServer temporaryVirtualServer = new VirtualServer(request.name, request.description, request.location, request.parameters,
+		VirtualServer tempVirtualServer = new VirtualServer(request.name, request.description, request.location, request.parameters,
 															request.notification, request.accessKey, request.encryptedSecret,
 															request.owner, request.idempotencyKey);
 		
-		if( nodeCount == 1 && createWithZombie(temporaryVirtualServer) )
+		if( nodeCount == 1 && createWithZombie(tempVirtualServer) )
 		{
 			logger.info("Only one zombie vs");
 			virtualMachinesRefs = new ArrayList<URI>(1);
@@ -269,8 +269,8 @@ public class VirtualServerResource {
 			virtualServerList 	= new ArrayList<VirtualServer>(1);
 			
 					
-			virtualServerList.	add(temporaryVirtualServer);
-			virtualMachinesRefs.add(temporaryVirtualServer.getUri());
+			virtualServerList.	add(tempVirtualServer);
+			virtualMachinesRefs.add(tempVirtualServer.getUri());
 		}
 		else
 		{
@@ -838,35 +838,35 @@ public class VirtualServerResource {
 		if (zombies != null)
 		{
 			logger.info("Got " + zombies.size() + " Zombies ");
-			zombieCheck: for (VirtualServer s : zombies)
+			zombieCheck: for (VirtualServer zombieVirtualServer : zombies)
 			{
-				boolean locationMatch = s.getLocation().equals(virtualServer.getLocation());
-				boolean accessMatch = s.getAccessKey().equals(virtualServer.getAccessKey());
-				boolean secretMatch = s.getEncryptedKey().equals(virtualServer.getEncryptedKey());
-				logger.info(" Zombie " + s.getInstanceId() + " location "+ locationMatch + " access " + accessMatch + " secret "+ secretMatch);
+				boolean locationMatch = zombieVirtualServer.getLocation().equals(virtualServer.getLocation());
+				boolean accessMatch = zombieVirtualServer.getAccessKey().equals(virtualServer.getAccessKey());
+				boolean secretMatch = zombieVirtualServer.getEncryptedKey().equals(virtualServer.getEncryptedKey());
+				logger.info(" Zombie " + zombieVirtualServer.getInstanceId() + " location "+ locationMatch + " access " + accessMatch + " secret "+ secretMatch);
 				
 				logger.info(" locationMatch: " + locationMatch + " accessMatch: " + accessMatch + " secretMatch: " + secretMatch);
 				if (locationMatch && accessMatch && secretMatch)
 				{
-					Map<String, String> map = s.getParametersMap();
-					for (NameValue x : virtualServer.getParameters())
+					Map<String, String> zombieMap = zombieVirtualServer.getParametersMap();
+					for (NameValue parameter : virtualServer.getParameters())
 					{
-						if (!SafeEquals(x.getValue(), map.get(x.getKey())))
+						if (!safeEquals(parameter.getValue(), zombieMap.get(parameter.getKey())))
 						{
-							logger.info("Mismatch on " + x.getKey() + " need "+ x.getValue() + " zombie "+ map.get(x.getKey()));
+							logger.info("Mismatch on " + parameter.getKey() + " need "+ parameter.getValue() + " zombie "+ zombieMap.get(parameter.getKey()));
 							continue zombieCheck;
 						}
 					}
 					
 					// zombie matches
 					boolean claimed = false;
-					final Long id = s.getId();
+					final Long zombieId = zombieVirtualServer.getId();
 					VirtualServerResource.dao.transact(new VoidWork()
 					{
 							@Override
 							public void vrun()
 							{
-								VirtualServer zombie = VirtualServerResource.dao.get(id);
+								VirtualServer zombie = VirtualServerResource.dao.get(zombieId);
 								zombie.setIdempotencyKey(new Date().toString());
 								VirtualServerResource.dao.add(zombie);
 								VirtualServerResource.dao.delete(zombie);
@@ -883,16 +883,16 @@ public class VirtualServerResource {
 						else
 							logger.info("Got 0 Zombies remaining");
 						
-						logger.info("Claimed " + s.getInstanceId());
-						refreshVirtualServer(s);
+						logger.info("Claimed " + zombieVirtualServer.getInstanceId());
+						refreshVirtualServer(zombieVirtualServer);
 						
-						if( !s.getStatus().equals(VirtualServerStatus.running) )
+						if( !zombieVirtualServer.getStatus().equals(VirtualServerStatus.running) )
 						{
-							terminate(s);
+							terminate(zombieVirtualServer);
 							continue;
 						}
-						virtualServer.setInstanceId(s.getInstanceId());
-						virtualServer.setCreated(s.getCreated());
+						virtualServer.setInstanceId(zombieVirtualServer.getInstanceId());
+						virtualServer.setCreated(zombieVirtualServer.getCreated());
 						updateVirtualServer(virtualServer);
 						
 						if( virtualServer.getStatus().equals(VirtualServerStatus.running) )
@@ -902,7 +902,7 @@ public class VirtualServerResource {
 						
 					} else
 					{
-						logger.warn("Zombie contention on " + s.getInstanceId());
+						logger.warn("Zombie contention on " + zombieVirtualServer.getInstanceId());
 					}
 				}
 			}
@@ -911,44 +911,48 @@ public class VirtualServerResource {
 		return false;
 	}
 	
-	private boolean SafeEquals(String a, String b)
+	private boolean safeEquals(String a, String b)
 	{
-		if ((a == null || a.length() == 0) && (b == null || b.length() == 0))
+		boolean emptyA = a == null || a.length() == 0;
+		boolean emptyB = b == null || b.length() == 0;
+		boolean aOrBNull = a == null || b == null;
+		
+		if (emptyA && emptyB)
 			return true;
-		if (a == null || b == null)
+		if (aOrBNull)
 			return false;
 		return (a.equals(b));
 	}
 	
-	protected boolean updateStatus(VirtualServer s, VirtualServerStatus newStatus)
+	protected boolean updateStatus(VirtualServer virtualServer, VirtualServerStatus newStatus)
 	{
-		VirtualServerStatus oldStatus = s.getStatus();
+		VirtualServerStatus oldStatus = virtualServer.getStatus();
 		if (oldStatus.equals(newStatus))
 			return false;
-		s.setStatus(newStatus);
+		virtualServer.setStatus(newStatus);
 		try
 		{
-			sendNotification(s, oldStatus, newStatus);
+			sendNotification(virtualServer, oldStatus, newStatus);
 		} catch (Exception e)
 		{
-			logger.info("SendNotification exception to <" + s.getNotification() + "> from " + s.getUri() + " old: " + oldStatus + " new: " + s.getStatus(), e);
+			logger.info("SendNotification exception to <" + virtualServer.getNotification() + "> from " + virtualServer.getUri() + " old: " + oldStatus + " new: " + virtualServer.getStatus(), e);
 			if (oldStatus.equals(newStatus))
 			{
-				logger.warn("Cancelling SendNotification to <" + s.getNotification() + "> from " + s.getUri() + " old: " + oldStatus + " new: " + s.getStatus());
+				logger.warn("Cancelling SendNotification to <" + virtualServer.getNotification() + "> from " + virtualServer.getUri() + " old: " + oldStatus + " new: " + virtualServer.getStatus());
 			}
 			else
 			{
-				s.setStatus(newStatus);
+				virtualServer.setStatus(newStatus);
 			}
 		}
 		return true;
 	}
 
 	
-	private void sendNotification(VirtualServer s, VirtualServerStatus oldStatus, VirtualServerStatus newStatus) throws Exception
+	private void sendNotification(VirtualServer virtualServer, VirtualServerStatus oldStatus, VirtualServerStatus newStatus) throws Exception
 	{
-		URI notification = s.getNotification();
-		logger.info("SendNotification to <" + notification + "> from " + s.getUri() + " old: " + oldStatus + " new: " + s.getStatus());
+		URI notification = virtualServer.getNotification();
+		logger.info("SendNotification to <" + notification + "> from " + virtualServer.getUri() + " old: " + oldStatus + " new: " + virtualServer.getStatus());
 
 		if (notification == null)
 			return;
@@ -957,15 +961,15 @@ public class VirtualServerResource {
 		{
 			client = Client.create();
 		}
-		WebResource resource = client.resource(s.getNotification());
+		WebResource resource = client.resource(virtualServer.getNotification());
 
-		ClientResponse response = resource.queryParam("source", s.getUri().toString()).queryParam("oldStatus", oldStatus.toString()).queryParam("newStatus", newStatus.toString()).type(MediaType.TEXT_PLAIN).get(ClientResponse.class);
+		ClientResponse response = resource.queryParam("source", virtualServer.getUri().toString()).queryParam("oldStatus", oldStatus.toString()).queryParam("newStatus", newStatus.toString()).type(MediaType.TEXT_PLAIN).get(ClientResponse.class);
 		logger.info("Notificaion status " + response.getStatus());
 		if (response.getStatus() == 410)
 		{
-			logger.info("VM GONE .. killing " + s.getUri() + " silencing reporting to " + s.getNotification());
-			s.setNotification(null);
-			deleteInstance(s);
+			logger.info("VM GONE .. killing " + virtualServer.getUri() + " silencing reporting to " + virtualServer.getNotification());
+			virtualServer.setNotification(null);
+			deleteInstance(virtualServer);
 		}
 	}
 
