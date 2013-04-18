@@ -73,7 +73,7 @@ public class HPCloudManager {
 	 */
 	private void initComputeService(String identity, String secretKey)
 	{
-		Properties properties = new Properties();		
+		Properties properties = new Properties();
 		long scriptTimeout = TimeUnit.MILLISECONDS.convert(20, TimeUnit.MINUTES);
 		properties.setProperty(TIMEOUT_SCRIPT_COMPLETE, scriptTimeout + "");
 		properties.setProperty("jclouds.modules","org.jclouds.gae.config.AsyncGoogleAppEngineConfigurationModule");

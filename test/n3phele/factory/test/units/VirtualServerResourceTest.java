@@ -6,11 +6,10 @@ import static org.junit.Assert.fail;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
-
-import javax.print.attribute.standard.Sides;
 import javax.ws.rs.core.UriBuilder;
-
+import n3phele.factory.hpcloud.HPCloudManager;
 import n3phele.factory.model.ServiceModelDao;
 import n3phele.factory.rest.impl.VirtualServerResource;
 import n3phele.service.core.NotFoundException;
@@ -26,7 +25,6 @@ import n3phele.service.model.core.VirtualServerStatus;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
@@ -231,7 +229,8 @@ public class VirtualServerResourceTest {
 		resource.kill(vs.getId(), false, false);		
 		
 		//If virtual server was deleted, this method throws an exception
-		VirtualServer virtualServer = manager.get(vs.getId());
+		VirtualServer virtualServer = manager.get(vs.getId());	
+				
 	}
 	
 	@Test
@@ -290,12 +289,82 @@ public class VirtualServerResourceTest {
 		//vs4 is running and has siblings in default value
 		VirtualServer vs4 = new VirtualServer("zombificable1", "desc", new URI("http://location.com"), new ArrayList<NameValue>(), new URI("http://notification.com"), "accessKey", "encryptedSecret", new URI("http://owner.com"), "idempotencyKey");
 		vs4.setStatus(VirtualServerStatus.running);
-		vs4.setInstanceId("InstanceID04");		
+		vs4.setInstanceId("InstanceID04");
 		
 		assertEquals("vs1 should be zimbificable", true, Whitebox.invokeMethod(virtualServerResource, "isZombieCandidate", vs1));
 		assertEquals("vs2 should not be zimbificable", false, Whitebox.invokeMethod(virtualServerResource, "isZombieCandidate", vs2));
 		assertEquals("vs3 should not be zimbificable", false, Whitebox.invokeMethod(virtualServerResource, "isZombieCandidate", vs3));
 		assertEquals("vs4 should be zimbificable", true, Whitebox.invokeMethod(virtualServerResource, "isZombieCandidate", vs4));
+	}
+	
+	@Test
+	public void checkForZombieExpiryTest() throws Exception
+	{
+		HPCloudManager manager = PowerMockito.mock(HPCloudManager.class);
+		
+		VirtualServerResource virtualServerResource = PowerMockito.spy(new VirtualServerResource());
+		PowerMockito.doNothing().when(virtualServerResource, "update", Mockito.any());
+		PowerMockito.doReturn(manager).when(virtualServerResource, "getNewHPCloudManager", Mockito.any(), Mockito.any());
+		
+		Date now = new Date();
+		
+		//vs1 is a zombie expired
+		VirtualServer vs1 = new VirtualServer("zombie", "desc01", new URI("http://location.com"), new ArrayList<NameValue>(), new URI("http://notification.com"), "accessKey", "encryptedSecret", new URI("http://owner.com"), "idempotencyKey");
+		vs1.setStatus(VirtualServerStatus.terminated);
+		vs1.setInstanceId("instance01");
+		vs1.setCreated(now);
+		vs1.setId(01l);
+		
+		//vs2 is a debug that is expired
+		VirtualServer vs2 = new VirtualServer("debug", "desc02", new URI("http://location.com"), new ArrayList<NameValue>(), new URI("http://notification.com"), "accessKey", "encryptedSecret", new URI("http://owner.com"), "idempotencyKey");
+		vs2.setStatus(VirtualServerStatus.terminated);
+		vs2.setInstanceId("instance02");
+		vs2.setCreated(now);
+		vs2.setId(02l);
+		
+		//vs3 is a process that is expired
+		VirtualServer vs3 = new VirtualServer("process", "desc03", new URI("http://location.com"), new ArrayList<NameValue>(), new URI("http://notification.com"), "accessKey", "encryptedSecret", new URI("http://owner.com"), "idempotencyKey");
+		vs3.setStatus(VirtualServerStatus.terminated);
+		vs3.setInstanceId("instance03");
+		vs3.setCreated(now);
+		vs3.setId(03l);
+		
+		//vs4 is a zombie that is not expired
+		VirtualServer vs4 = new VirtualServer("zombie", "desc05", new URI("http://location.com"), new ArrayList<NameValue>(), new URI("http://notification.com"), "accessKey", "encryptedSecret", new URI("http://owner.com"), "idempotencyKey");
+		vs4.setStatus(VirtualServerStatus.running);
+		vs4.setInstanceId("instance04");
+		vs4.setCreated(now);
+		vs4.setId(04l);
+		
+		//vs5 is a debug that is not expired
+		VirtualServer vs5 = new VirtualServer("debug", "desc05", new URI("http://location.com"), new ArrayList<NameValue>(), new URI("http://notification.com"), "accessKey", "encryptedSecret", new URI("http://owner.com"), "idempotencyKey");
+		vs5.setStatus(VirtualServerStatus.running);
+		vs5.setCreated(now);
+		vs5.setId(05l);
+		
+		//vs6 is a process that is not expired
+		VirtualServer vs6 = new VirtualServer("process", "desc", new URI("http://location.com"), new ArrayList<NameValue>(), new URI("http://notification.com"), "accessKey", "encryptedSecret", new URI("http://owner.com"), "idempotencyKey");
+		vs6.setStatus(VirtualServerStatus.running);
+		vs6.setCreated(now);
+		vs6.setId(06l);
+		
+		//vs7 is a zombie that is expired
+		VirtualServer vs7 = new VirtualServer("zombi3", "desc04", new URI("http://location.com"), new ArrayList<NameValue>(), new URI("http://notification.com"), "accessKey", "encryptedSecret", new URI("http://owner.com"), "idempotencyKey");
+		vs7.setStatus(VirtualServerStatus.terminated);
+		vs7.setInstanceId("instance07");
+		vs7.setCreated(now);
+		ArrayList<NameValue> p = new ArrayList<NameValue>();
+		p.add(new NameValue("n3phele-behavior", "zombie"));
+		vs7.setParameters(p);
+		vs7.setId(07l);
+		
+		assertEquals("vs1 should be a expired zombie", true, Whitebox.invokeMethod(virtualServerResource, "checkForZombieExpiry", vs1));
+		assertEquals("vs2 should be a expired debug", true, Whitebox.invokeMethod(virtualServerResource, "checkForZombieExpiry", vs2));
+		assertEquals("vs3 should not be a expired zombie or debug", false, Whitebox.invokeMethod(virtualServerResource, "checkForZombieExpiry", vs3));
+		assertEquals("vs4 should not be a expired zombie or debug", false, Whitebox.invokeMethod(virtualServerResource, "checkForZombieExpiry", vs4));
+		assertEquals("vs5 should not be a expired zombie or debug", false, Whitebox.invokeMethod(virtualServerResource, "checkForZombieExpiry", vs5));
+		assertEquals("vs6 should not be a expired zombie or debug", false, Whitebox.invokeMethod(virtualServerResource, "checkForZombieExpiry", vs6));
+		assertEquals("vs7 should be a expired zombie", true, Whitebox.invokeMethod(virtualServerResource, "checkForZombieExpiry", vs7));
 	}
 
 	private VirtualServer createFakeDataVirtualServer() {
@@ -330,7 +399,7 @@ public class VirtualServerResourceTest {
 		}
 		
 		protected void delete (VirtualServer vs){
-			super.add(vs);
+			super.delete(vs);
 		}
 		
 		protected VirtualServer get(Long id){
