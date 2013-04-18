@@ -71,7 +71,7 @@ public class HPCloudExtractorTest {
 		 Server server = Mockito.mock(Server.class);
 		 
 		 myMultimap.put("private", Address.createV4("192.168.100.1"));
-		 myMultimap.put("private", Address.createV4("192.168.100.2"));
+		 myMultimap.put("public", Address.createV4("192.168.100.2"));
 		 
 		 when(server.getAddresses()).thenReturn(myMultimap);	
 		 
@@ -95,7 +95,7 @@ public class HPCloudExtractorTest {
 		 Multimap<String, Address> myMultimap = ArrayListMultimap.create();
 		 Server server = Mockito.mock(Server.class);
 		 
-		 myMultimap.put("public", Address.createV4("192.168.100.1"));
+		 myMultimap.put("private", Address.createV4("192.168.100.1"));
 		 myMultimap.put("public", Address.createV4("192.168.100.2"));
 		 
 		 when(server.getAddresses()).thenReturn(myMultimap);	
