@@ -8,12 +8,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
-
-import javax.print.attribute.standard.Sides;
 import javax.ws.rs.core.UriBuilder;
-
-import n3phele.factory.hpcloud.HPCloudCredentials;
 import n3phele.factory.hpcloud.HPCloudManager;
 import n3phele.factory.model.ServiceModelDao;
 import n3phele.factory.rest.impl.VirtualServerResource;
@@ -30,7 +25,6 @@ import n3phele.service.model.core.VirtualServerStatus;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
@@ -235,7 +229,8 @@ public class VirtualServerResourceTest {
 		resource.kill(vs.getId(), false, false);		
 		
 		//If virtual server was deleted, this method throws an exception
-		VirtualServer virtualServer = manager.get(vs.getId());
+		VirtualServer virtualServer = manager.get(vs.getId());	
+				
 	}
 	
 	@Test
@@ -404,7 +399,7 @@ public class VirtualServerResourceTest {
 		}
 		
 		protected void delete (VirtualServer vs){
-			super.add(vs);
+			super.delete(vs);
 		}
 		
 		protected VirtualServer get(Long id){
