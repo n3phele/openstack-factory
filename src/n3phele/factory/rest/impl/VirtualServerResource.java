@@ -858,22 +858,24 @@ public class VirtualServerResource {
 						}
 					}
 					
-					// zombie matches
-					boolean claimed = false;
 					final Long zombieId = zombieVirtualServer.getId();
-					VirtualServerResource.dao.transact(new VoidWork()
+					boolean claimed = VirtualServerResource.dao.transact(new Work<Boolean>()
 					{
 							@Override
-							public void vrun()
+							public Boolean run()
 							{
-								VirtualServer zombie = VirtualServerResource.dao.get(zombieId);
-								zombie.setIdempotencyKey(new Date().toString());
-								VirtualServerResource.dao.add(zombie);
-								VirtualServerResource.dao.delete(zombie);
+								try{
+									VirtualServer zombie = VirtualServerResource.dao.get(zombieId);
+									zombie.setIdempotencyKey(new Date().toString());
+									VirtualServerResource.dao.add(zombie);
+									VirtualServerResource.dao.delete(zombie);
+								}
+								catch(Exception e){
+									return false;
+								}
+								return true;
 							}
 					 });
-					//FIXME: This variable need to be into vrun().
-					claimed = true;
 					
 					if (claimed)
 					{
