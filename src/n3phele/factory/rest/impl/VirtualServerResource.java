@@ -606,17 +606,20 @@ public class VirtualServerResource {
 				String publicIP = "";
 				String privateIP = "";
 				ArrayList<NameValue> params = virtualServer.getOutputParameters();
-				for(NameValue p : params)
+				if( params != null )
 				{
-					if(p.getKey().equalsIgnoreCase("publicIpAddress" ))
+					for(NameValue p : params)
 					{
-						publicIP = p.getValue();
-						logger.warn("Name: "+p.getKey()+" ,Value: "+p.getValue());
-					}
-					if(p.getKey().equalsIgnoreCase("privateIpAddress" ))
-					{
-						privateIP = p.getValue();
-						logger.warn("Name: "+p.getKey()+" ,Value: "+p.getValue());
+						if(p.getKey().equalsIgnoreCase("publicIpAddress" ))
+						{
+							publicIP = p.getValue();
+							logger.warn("Name: "+p.getKey()+" ,Value: "+p.getValue());
+						}
+						if(p.getKey().equalsIgnoreCase("privateIpAddress" ))
+						{
+							privateIP = p.getValue();
+							logger.warn("Name: "+p.getKey()+" ,Value: "+p.getValue());
+						}
 					}
 				}
 								
