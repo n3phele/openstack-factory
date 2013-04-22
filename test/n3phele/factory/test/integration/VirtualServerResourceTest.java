@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import javax.ws.rs.core.UriBuilder;
 
 import n3phele.security.EncryptedHPCredentials;
+import n3phele.service.core.Resource;
 import n3phele.service.model.core.ExecutionFactoryCreateRequest;
 import n3phele.service.model.core.NameValue;
 
@@ -24,6 +25,7 @@ import org.junit.Test;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.api.client.filter.HTTPBasicAuthFilter;
 import com.sun.jersey.api.representation.Form;
 
 public class VirtualServerResourceTest {
@@ -41,7 +43,7 @@ public class VirtualServerResourceTest {
 	public void setUp() throws Exception {
 		client = Client.create();
 		//FIXME this is not needed? bug?
-		//client.addFilter(new HTTPBasicAuthFilter(Resource.get("factoryUser", ""), Resource.get("factorySecret", "")));
+		client.addFilter(new HTTPBasicAuthFilter(Resource.get("factoryUser", ""), Resource.get("factorySecret", "")));
 		
 		//load all properties from the crendentials.properties file where sensible credentials are registered for tests
 		try
