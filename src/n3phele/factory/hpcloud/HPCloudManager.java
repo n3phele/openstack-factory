@@ -58,7 +58,7 @@ public class HPCloudManager {
 	 *            HP Cloud credentials
 	 */
 	public HPCloudManager(HPCloudCredentials creds)
-	{
+	{ 
 		initComputeService(creds.getIdentity(), creds.getSecretKey());
 		
 		

@@ -12,6 +12,7 @@
 package n3phele.factory.rest.impl;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
+import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -190,9 +191,78 @@ public class VirtualServerResource {
 	@Produces("application/json")
 	@RolesAllowed("authenticated")
 	@Path("virtualServer")
-	public Response create(ExecutionFactoryCreateRequest request) throws Exception
+	public Response create(ExecutionFactoryCreateRequest request) throws Exception, InvalidParameterException
 	{
-		int nodeCount = 1;		logger.info("Creating hp cloud request");
+		HPCloudCreateServerRequest hpCloudRequest = fillWithRequest(request);
+		logger.info("Creating zombie");
+		/**
+		 * We're creating a temporary VirtualServer item to call createWithZombie method if we're creating just one machine.
+		 * If zombie is created with success, they'll just initialize the ArrayLists.
+		 */
+		Date epoch									= new Date();
+		List<URI> virtualMachinesRefs				= null;
+		ArrayList<String> siblings 					= null;
+		ArrayList<VirtualServer> virtualServerList	= null;
+		
+		VirtualServer tempVirtualServer = new VirtualServer(request.name, request.description, request.location, request.parameters,
+															request.notification, request.accessKey, request.encryptedSecret,
+															request.owner, request.idempotencyKey);
+		
+		if( hpCloudRequest.nodeCount == 1 && createWithZombie(tempVirtualServer) )
+		{
+			logger.info("Only one zombie virtualServer");
+			virtualMachinesRefs = new ArrayList<URI>(1);
+			siblings 			= new ArrayList<String>(1);
+			virtualServerList 	= new ArrayList<VirtualServer>(1);
+			
+					
+			virtualServerList.	add(tempVirtualServer);
+			virtualMachinesRefs.add(tempVirtualServer.getUri());
+		}
+		else
+		{
+			HPCloudManager hpCloudManager 			= getNewHPCloudManager(request.accessKey, request.encryptedSecret);
+			List<ServerCreated> resultServerList	= hpCloudManager.createServerRequest(hpCloudRequest);
+			virtualMachinesRefs 					= new ArrayList<URI>(resultServerList.size());
+			siblings 								= new ArrayList<String>(resultServerList.size());
+			virtualServerList 						= new ArrayList<VirtualServer>(resultServerList.size());
+			
+			for (ServerCreated server : resultServerList)
+			{
+				VirtualServer virtualServer = new VirtualServer(server.getName(), request.description, request.location,
+														request.parameters, request.notification, request.accessKey,
+														request.encryptedSecret, request.owner, request.idempotencyKey);
+				virtualServer.setCreated(epoch);
+				virtualServer.setInstanceId(server.getId());
+				logger.info("Created new VirtualServer: " + virtualServer.getUri());
+				add(virtualServer);
+				logger.info("Added new VirtualServer: " + virtualServer.getUri());
+				virtualServerList.add(virtualServer);
+				virtualMachinesRefs.add(virtualServer.getUri());
+			}
+		}
+		
+		for(VirtualServer virtualServer : virtualServerList)
+		{
+			siblings.add(virtualServer.getUri().toString());
+		}
+		
+		for(VirtualServer virtualServer : virtualServerList)
+		{
+			virtualServer.setSiblings(siblings);
+			logger.info("updating");
+			update(virtualServer);
+		}
+		logger.info("Created new VirtualServer");
+		return Response.created(virtualServerList.get(0).getUri()).entity(new CreateVirtualServerResponse(virtualMachinesRefs)).build();
+	}
+
+
+
+	protected HPCloudCreateServerRequest fillWithRequest(
+			ExecutionFactoryCreateRequest request) throws InvalidParameterException {
+		int nodeCount = 1;		
+		logger.info("Creating hp cloud request");
 		HPCloudCreateServerRequest hpCloudRequest = new HPCloudCreateServerRequest();
 		
 		logger.info("Setting parameters");
@@ -245,69 +315,13 @@ public class VirtualServerResource {
 			}
 		}
 		
+		if(hpCloudRequest.imageRef == null || hpCloudRequest.flavorRef == null ||
+				hpCloudRequest.security_groups == null || hpCloudRequest.locationId == null || hpCloudRequest.keyName == null)
+			throw new InvalidParameterException("Some parameters were not filled correctly");
+		
 		hpCloudRequest.nodeCount 	= nodeCount;
 		hpCloudRequest.serverName 	= request.name;
-		logger.info("Creating zombie");
-		/**
-		 * We're creating a temporary VirtualServer item to call createWithZombie method if we're creating just one machine.
-		 * If zombie is created with success, they'll just initialize the ArrayLists.
-		 */
-		Date epoch									= new Date();
-		List<URI> virtualMachinesRefs				= null;
-		ArrayList<String> siblings 					= null;
-		ArrayList<VirtualServer> virtualServerList	= null;
-		
-		VirtualServer tempVirtualServer = new VirtualServer(request.name, request.description, request.location, request.parameters,
-															request.notification, request.accessKey, request.encryptedSecret,
-															request.owner, request.idempotencyKey);
-		
-		if( nodeCount == 1 && createWithZombie(tempVirtualServer) )
-		{
-			logger.info("Only one zombie vs");
-			virtualMachinesRefs = new ArrayList<URI>(1);
-			siblings 			= new ArrayList<String>(1);
-			virtualServerList 	= new ArrayList<VirtualServer>(1);
-			
-					
-			virtualServerList.	add(tempVirtualServer);
-			virtualMachinesRefs.add(tempVirtualServer.getUri());
-		}
-		else
-		{
-			HPCloudManager hpCloudManager 			= getNewHPCloudManager(request.accessKey, request.encryptedSecret);
-			List<ServerCreated> resultServerList	= hpCloudManager.createServerRequest(hpCloudRequest);
-			virtualMachinesRefs 					= new ArrayList<URI>(resultServerList.size());
-			siblings 								= new ArrayList<String>(resultServerList.size());
-			virtualServerList 						= new ArrayList<VirtualServer>(resultServerList.size());
-			
-			for (ServerCreated server : resultServerList)
-			{
-				VirtualServer virtualServer = new VirtualServer(server.getName(), request.description, request.location,
-														request.parameters, request.notification, request.accessKey,
-														request.encryptedSecret, request.owner, request.idempotencyKey);
-				virtualServer.setCreated(epoch);
-				virtualServer.setInstanceId(server.getId());
-				logger.info("Created new VirtualServer: " + virtualServer.getUri());
-				add(virtualServer);
-				logger.info("Added new VirtualServer: " + virtualServer.getUri());
-				virtualServerList.add(virtualServer);
-				virtualMachinesRefs.add(virtualServer.getUri());
-			}
-		}
-		
-		for(VirtualServer virtualServer : virtualServerList)
-		{
-			siblings.add(virtualServer.getUri().toString());
-		}
-		
-		for(VirtualServer virtualServer : virtualServerList)
-		{
-			virtualServer.setSiblings(siblings);
-			logger.info("updating");
-			update(virtualServer);
-		}
-		logger.info("Created new VirtualServer");
-		return Response.created(virtualServerList.get(0).getUri()).entity(new CreateVirtualServerResponse(virtualMachinesRefs)).build();
+		return hpCloudRequest;
 	}
 
 	/** Get details of a specific virtual server. This operation does a deep get, getting information from the cloud before
