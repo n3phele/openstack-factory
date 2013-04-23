@@ -24,6 +24,7 @@ import org.junit.Test;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.api.client.filter.HTTPBasicAuthFilter;
 import com.sun.jersey.api.representation.Form;
 
 public class VirtualServerResourceTest {
@@ -41,7 +42,9 @@ public class VirtualServerResourceTest {
 	public void setUp() throws Exception {
 		client = Client.create();
 		//FIXME this is not needed? bug?
-		//client.addFilter(new HTTPBasicAuthFilter(Resource.get("factoryUser", ""), Resource.get("factorySecret", "")));
+		
+		client.setConnectTimeout(60000);
+		client.setReadTimeout(60000);
 		
 		//load all properties from the crendentials.properties file where sensible credentials are registered for tests
 		try
@@ -51,7 +54,9 @@ public class VirtualServerResourceTest {
 		catch(FileNotFoundException e)
 		{			
 			throw new FileNotFoundException("The necessary file with test credentials was not found. Manually create the file and put real credentials there so integration tests can reach the cloud. See tests for necessary variables.");
-		}
+		}		
+
+		client.addFilter(new HTTPBasicAuthFilter(testResource.get("factoryUser", ""), testResource.get("factorySecret", "")));
 		
 		String serverAddress = testResource.get("testServerAddress", "http://127.0.0.1:8888");
 		webResource = client.resource(UriBuilder.fromUri(serverAddress + "/resources/virtualServer").build());
@@ -82,7 +87,7 @@ public class VirtualServerResourceTest {
 		form.add("locationId", "az-1.region-a.geo-1");
 		form.add("firstName", "User");
 		form.add("lastName", "LastName");
-		form.add("security_groups", "default-lis");
+		form.add("securityGroup", "default-lis");
 		form.add("email", "test@cpca.pucrs.br");
 
 		ClientResponse result = resource.post(ClientResponse.class, form);		
