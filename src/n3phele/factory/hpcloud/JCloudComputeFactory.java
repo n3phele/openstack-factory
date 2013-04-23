@@ -12,14 +12,12 @@ import org.jclouds.gae.config.AsyncGoogleAppEngineConfigurationModule;
 import org.jclouds.logging.slf4j.config.SLF4JLoggingModule;
 import org.jclouds.openstack.nova.v2_0.NovaApi;
 import org.jclouds.rest.RestContext;
-import org.slf4j.Logger;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Module;
 
 public class JCloudComputeFactory implements CloudFactory {
-	private ComputeService mCompute;
-	public RestContext mNova;
+	private ComputeService mCompute;	
 	private NovaApi mNovaApi;
 
 	/**
@@ -43,7 +41,7 @@ public class JCloudComputeFactory implements CloudFactory {
 		ComputeServiceContext context = builder.buildView(ComputeServiceContext.class);
 	
 		mCompute = context.getComputeService();
-		mNova = context.unwrap();
+		RestContext mNova = context.unwrap();
 		mNovaApi = (NovaApi) mNova.getApi();
 	}
 

@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import javax.ws.rs.core.UriBuilder;
 
 import n3phele.security.EncryptedHPCredentials;
-import n3phele.service.core.Resource;
 import n3phele.service.model.core.ExecutionFactoryCreateRequest;
 import n3phele.service.model.core.NameValue;
 
@@ -42,8 +41,9 @@ public class VirtualServerResourceTest {
 	@Before
 	public void setUp() throws Exception {
 		client = Client.create();
-		//FIXME this is not needed? bug?
-		client.addFilter(new HTTPBasicAuthFilter(Resource.get("factoryUser", ""), Resource.get("factorySecret", "")));
+		
+		client.setConnectTimeout(60000);
+		client.setReadTimeout(60000);
 		
 		//load all properties from the crendentials.properties file where sensible credentials are registered for tests
 		try
@@ -53,7 +53,9 @@ public class VirtualServerResourceTest {
 		catch(FileNotFoundException e)
 		{			
 			throw new FileNotFoundException("The necessary file with test credentials was not found. Manually create the file and put real credentials there so integration tests can reach the cloud. See tests for necessary variables.");
-		}
+		}		
+
+		client.addFilter(new HTTPBasicAuthFilter(testResource.get("factoryUser", ""), testResource.get("factorySecret", "")));
 		
 		String serverAddress = testResource.get("testServerAddress", "http://127.0.0.1:8888");
 		webResource = client.resource(UriBuilder.fromUri(serverAddress + "/resources/virtualServer").build());
@@ -84,7 +86,7 @@ public class VirtualServerResourceTest {
 		form.add("locationId", "az-1.region-a.geo-1");
 		form.add("firstName", "User");
 		form.add("lastName", "LastName");
-		form.add("security_groups", "default-lis");
+		form.add("securityGroup", "default-lis");
 		form.add("email", "test@cpca.pucrs.br");
 
 		ClientResponse result = resource.post(ClientResponse.class, form);		
@@ -105,14 +107,14 @@ public class VirtualServerResourceTest {
 		request.encryptedSecret = secret;
 		request.location = new URI("https://az-1.region-a.geo-1.ec2-compute.hpcloudsvc.com/services/Cloud");
 		request.description = "description";
-		request.name = "name";
+		request.name = "vm_name";
 		request.owner = new URI("http://localhost/");
 		ArrayList<NameValue> parameters = new ArrayList<NameValue>();
 		parameters.add(new NameValue("nodeCount", "1"));
 		parameters.add(new NameValue("imageRef", "75845"));
 		parameters.add(new NameValue("flavorRef", "100"));
-		parameters.add(new NameValue("security_groups", "default"));
-		parameters.add(new NameValue("key_name", "liskey"));
+		parameters.add(new NameValue("security_groups", "default_lis"));
+		parameters.add(new NameValue("key_name", "lis_key"));
 		parameters.add(new NameValue("locationId", "az-1.region-a.geo-1"));
 		parameters.add(new NameValue("user_data", ""));
 		request.parameters = parameters;
