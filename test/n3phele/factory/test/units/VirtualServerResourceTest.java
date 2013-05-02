@@ -5,10 +5,15 @@ import static org.junit.Assert.fail;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+
+import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
+
+import n3phele.factory.hpcloud.HPCloudCreateServerRequest;
 import n3phele.factory.hpcloud.HPCloudManager;
 import n3phele.factory.model.ServiceModelDao;
 import n3phele.factory.rest.impl.VirtualServerResource;
@@ -17,6 +22,8 @@ import n3phele.service.core.Resource;
 import n3phele.service.model.core.AbstractManager;
 import n3phele.service.model.core.BaseEntity;
 import n3phele.service.model.core.Collection;
+import n3phele.service.model.core.CreateVirtualServerResponse;
+import n3phele.service.model.core.ExecutionFactoryCreateRequest;
 import n3phele.service.model.core.GenericModelDao;
 import n3phele.service.model.core.NameValue;
 import n3phele.service.model.core.VirtualServer;
@@ -367,6 +374,48 @@ public class VirtualServerResourceTest {
 		assertEquals("vs7 should be a expired zombie", true, Whitebox.invokeMethod(virtualServerResource, "checkForZombieExpiry", vs7));
 	}
 
+	@Test
+	public void returnUrisOfTwoCreatedVMs() throws InvalidParameterException, Exception {
+		
+		final VirtualServer v1 = createFakeDataVirtualServer();
+		v1.setUri(new URI("http://localhost/server/1") );
+
+		final VirtualServer v2 = createFakeDataVirtualServer();
+		v2.setUri(new URI("http://localhost/server/2") );
+		
+		VirtualServerResource resource = new VirtualServerResource() {
+			protected ArrayList<VirtualServer> createOneOrMoreVMs(ExecutionFactoryCreateRequest request,HPCloudCreateServerRequest hpCloudRequest, Date epoch)
+			{
+				ArrayList<VirtualServer> vsList = new ArrayList<VirtualServer>();				
+				vsList.add(v1);
+				vsList.add(v2);				
+				return vsList;
+			}
+			
+			//Do not execute database update operation
+			protected void updateVMSiblings(ArrayList<String> siblings,
+					ArrayList<VirtualServer> virtualServerList)
+			{
+				
+			}
+		};
+		
+		ExecutionFactoryCreateRequest request = new ExecutionFactoryCreateRequest();
+		request.parameters = new ArrayList<NameValue>();
+		NameValue nodeCount = new NameValue();
+		nodeCount.setKey("nodeCount");
+		nodeCount.setValue("1");
+		request.parameters.add(nodeCount);
+		
+		Response response = resource.create(request);
+		
+		CreateVirtualServerResponse createResponse = (CreateVirtualServerResponse) response.getEntity();
+		assertEquals(2, createResponse.vmList.length);
+		assertEquals(v1.getUri(), createResponse.vmList[0]);
+		assertEquals(v2.getUri(), createResponse.vmList[1]);
+	}
+	
+	
 	private VirtualServer createFakeDataVirtualServer() {
 		URI uri = null;
 		try {

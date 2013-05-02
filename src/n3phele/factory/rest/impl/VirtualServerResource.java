@@ -202,29 +202,57 @@ public class VirtualServerResource {
 		Date epoch									= new Date();
 		List<URI> virtualMachinesRefs				= null;
 		ArrayList<String> siblings 					= null;
-		ArrayList<VirtualServer> virtualServerList	= null;
+		ArrayList<VirtualServer> virtualServerList	= null;				
+				
+		virtualServerList = createOneOrMoreVMs(request, hpCloudRequest, epoch);
 		
+		//get URIs for siblings and pass to VMs
+		//FIXME siblings have the same info as virtualMachineRefs, but are Strings. Maybe we can use only one of them.
+		siblings = new ArrayList<String>(virtualServerList.size());
+		for(VirtualServer virtualServer : virtualServerList)
+		{
+			siblings.add(virtualServer.getUri().toString());
+		}
+		
+		updateVMSiblings(siblings, virtualServerList);
+		
+		logger.info("Created new VirtualServer");
+		
+		virtualMachinesRefs = getMachineUris(virtualServerList);
+		return Response.created(virtualServerList.get(0).getUri()).entity(new CreateVirtualServerResponse(virtualMachinesRefs)).build();
+	}
+
+
+	protected void updateVMSiblings(ArrayList<String> siblings,
+			ArrayList<VirtualServer> virtualServerList) {
+		for(VirtualServer virtualServer : virtualServerList)
+		{
+			virtualServer.setSiblings(siblings);
+			logger.info("updating");
+			update(virtualServer);
+		}
+	}
+
+
+	protected ArrayList<VirtualServer> createOneOrMoreVMs(
+			ExecutionFactoryCreateRequest request,
+			HPCloudCreateServerRequest hpCloudRequest, Date epoch) {
+				
 		VirtualServer tempVirtualServer = new VirtualServer(request.name, request.description, request.location, request.parameters,
-															request.notification, request.accessKey, request.encryptedSecret,
-															request.owner, request.idempotencyKey);
+				request.notification, request.accessKey, request.encryptedSecret,
+				request.owner, request.idempotencyKey);
 		
+		ArrayList<VirtualServer> virtualServerList;
 		if( hpCloudRequest.nodeCount == 1 && createWithZombie(tempVirtualServer) )
 		{
 			logger.info("Only one zombie virtualServer");
-			virtualMachinesRefs = new ArrayList<URI>(1);
-			siblings 			= new ArrayList<String>(1);
-			virtualServerList 	= new ArrayList<VirtualServer>(1);
-			
-					
+			virtualServerList 	= new ArrayList<VirtualServer>(1);					
 			virtualServerList.	add(tempVirtualServer);
-			virtualMachinesRefs.add(tempVirtualServer.getUri());
 		}
 		else
 		{
 			HPCloudManager hpCloudManager 			= getNewHPCloudManager(request.accessKey, request.encryptedSecret);
 			List<ServerCreated> resultServerList	= hpCloudManager.createServerRequest(hpCloudRequest);
-			virtualMachinesRefs 					= new ArrayList<URI>(resultServerList.size());
-			siblings 								= new ArrayList<String>(resultServerList.size());
 			virtualServerList 						= new ArrayList<VirtualServer>(resultServerList.size());
 			
 			for (ServerCreated server : resultServerList)
@@ -238,26 +266,22 @@ public class VirtualServerResource {
 				add(virtualServer);
 				logger.info("Added new VirtualServer: " + virtualServer.getUri());
 				virtualServerList.add(virtualServer);
-				virtualMachinesRefs.add(virtualServer.getUri());
 			}
 		}
-		
-		for(VirtualServer virtualServer : virtualServerList)
-		{
-			siblings.add(virtualServer.getUri().toString());
-		}
-		
-		for(VirtualServer virtualServer : virtualServerList)
-		{
-			virtualServer.setSiblings(siblings);
-			logger.info("updating");
-			update(virtualServer);
-		}
-		logger.info("Created new VirtualServer");
-		return Response.created(virtualServerList.get(0).getUri()).entity(new CreateVirtualServerResponse(virtualMachinesRefs)).build();
+		return virtualServerList;
 	}
 
-
+	protected List<URI> getMachineUris(ArrayList<VirtualServer> virtualServerList)
+	{
+		List<URI> Uris = new ArrayList<URI>(virtualServerList.size());
+		
+		for(VirtualServer virtualServer: virtualServerList)
+		{
+			Uris.add(virtualServer.getUri());
+		}
+		
+		return Uris;		
+	}
 
 	protected HPCloudCreateServerRequest fillWithRequest(
 			ExecutionFactoryCreateRequest request) throws InvalidParameterException {
