@@ -352,15 +352,21 @@ public class VirtualServerResource {
 	@RolesAllowed("authenticated")
 	public void kill(@PathParam("id") Long id, @DefaultValue("false") @QueryParam("debug") boolean debug, @DefaultValue("false") @QueryParam("error") boolean error) throws NotFoundException
 	{
+		logger.info("[REST] DELETE was been called with id" + id + " debug = " + debug + " error = " + error);
 		VirtualServer virtualServer = null;
 		try
 		{
 			virtualServer = deepGet(id);
 			if (error && !debug)
 			{
+				logger.info("[REST] terminating...");
 				terminate(virtualServer);
-			} else
+			}
+			else
+			{
+				logger.info("[REST] Softkill...");
 				softKill(virtualServer, error);
+			}
 		} catch (Exception e)
 		{
 			try
@@ -533,18 +539,17 @@ public class VirtualServerResource {
 				logger.info("Server has " + virtualServer.getSiblings().size()	+ " siblings");
 				result = false;
 			}
-			else
-			{				
-				if (!virtualServer.getStatus().equals(VirtualServerStatus.running)) 
-				{
-					logger.info("Server is " + virtualServer.getStatus());
-					result = false;
-				}
+			
+			if (!virtualServer.getStatus().equals(VirtualServerStatus.running)) 
+			{
+				logger.info("Server is " + virtualServer.getStatus());
+				result = false;
 			}
 		} else
 		{
 			logger.info("Null server or instanceId");
 		}
+		logger.info("isZombieCandidate returning " + result);
 		return result;
 	}
 
