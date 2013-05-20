@@ -105,7 +105,7 @@ public class VirtualServerResourceTest {
 		
 		request.accessKey = accessId;
 		request.encryptedSecret = secret;
-		request.location = new URI("https://az-1.region-a.geo-1.ec2-compute.hpcloudsvc.com/services/Cloud");
+		request.location = new URI("https://az-1.region-a.geo-1.compute.hpcloudsvc.com/v1.1/12365734013392");
 		request.description = "description";
 		request.name = "vm_name";
 		request.owner = new URI("http://localhost/");

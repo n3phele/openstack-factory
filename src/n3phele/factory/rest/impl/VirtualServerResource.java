@@ -93,7 +93,7 @@ public class VirtualServerResource {
 	private Client						client	= null;
 	private final static VirtualServerManager	manager = new VirtualServerManager();
 	
-	private final static String FACTORY_NAME	= "nova-factory";
+	public final static String FACTORY_NAME	= "nova-factory";
 	final Logger logger = LoggerFactory.getLogger(VirtualServerResource.class);
 
 	public VirtualServerResource()
@@ -700,7 +700,7 @@ public class VirtualServerResource {
 		}
 	}
 	
-	private String getLocationId(VirtualServer virtualServer)
+	public String getLocationId(VirtualServer virtualServer)
 	{
 		ArrayList<NameValue> listParameters = virtualServer.getParameters();
 		String locationId = null;
@@ -827,7 +827,7 @@ public class VirtualServerResource {
 		return result;
 	}
 
-	private void deleteInstance(VirtualServer virtualServer) throws Exception
+	public void deleteInstance(VirtualServer virtualServer) throws Exception
 	{
 		String instanceId = virtualServer.getInstanceId();
 		try

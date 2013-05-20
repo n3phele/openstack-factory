@@ -157,10 +157,10 @@ public class VirtualServerResourceTest {
 	@Test
 	public void virtualServerListTest() {
 
-		VirtualServerManager manager = new VirtualServerManager();
+		VirtualServerDAO manager = new VirtualServerDAO();
 				
 		//Add a virtual server object to database
-		VirtualServer vs = createFakeDataVirtualServer();
+		VirtualServer vs = Utils.createFakeDataVirtualServer();
 		manager.add(vs);
 		
 		//Test list method return from resource
@@ -174,10 +174,10 @@ public class VirtualServerResourceTest {
 	@Test
 	public void virtualServerGetTest() {
 
-		VirtualServerManager manager = new VirtualServerManager();
+		VirtualServerDAO manager = new VirtualServerDAO();
 				
 		//Add a virtual server object to database
-		VirtualServer vs = createFakeDataVirtualServer();
+		VirtualServer vs = Utils.createFakeDataVirtualServer();
 		long id = 1111l;
 		vs.setId(id);
 		manager.add(vs);
@@ -202,12 +202,45 @@ public class VirtualServerResourceTest {
 	}
 	
 	@Test(expected = NotFoundException.class)
-	public void virtualServerKillTest() {
+	public void virtualServerKillCallsSoftKillVMWhenNoErrorTest() {
 
-		final VirtualServerManager manager = new VirtualServerManager();
+		final VirtualServerDAO manager = new VirtualServerDAO();
 				
 		//Add a virtual server object to database
-		VirtualServer vs = createFakeDataVirtualServer();
+		VirtualServer vs = Utils.createFakeDataVirtualServer();
+		long id = 1111l;
+		vs.setId(id);
+		manager.add(vs);
+		
+		VirtualServerResource resource = new VirtualServerResource() {
+			//Do nothing when trying to update reference throw remote call
+			@Override
+			protected void updateVirtualServer(VirtualServer item) throws IllegalArgumentException
+			{
+				
+			}
+			
+			@Override
+			protected void softKill(VirtualServer virtualServer, boolean error)
+			{
+				manager.delete(virtualServer);
+			}
+		};
+		
+		//Send error as false
+		resource.kill(vs.getId(), false, false);		
+		
+		//If virtual server was deleted, this method throws an exception
+		VirtualServer virtualServer = manager.get(vs.getId());				
+	}
+	
+	@Test(expected = NotFoundException.class)
+	public void virtualServerKillCallsTerminateVMWhenErrorTest() {
+
+		final VirtualServerDAO manager = new VirtualServerDAO();
+				
+		//Add a virtual server object to database
+		VirtualServer vs = Utils.createFakeDataVirtualServer();
 		long id = 1111l;
 		vs.setId(id);
 		manager.add(vs);
@@ -225,25 +258,19 @@ public class VirtualServerResourceTest {
 			{
 				manager.delete(virtualServer);
 			}
-			
-			@Override
-			protected void softKill(VirtualServer virtualServer, boolean error)
-			{
-				manager.delete(virtualServer);
-			}
 		};
 		
-		resource.kill(vs.getId(), false, false);		
+		//Send error as true
+		resource.kill(vs.getId(), false, true);		
 		
 		//If virtual server was deleted, this method throws an exception
-		VirtualServer virtualServer = manager.get(vs.getId());	
-				
+		VirtualServer virtualServer = manager.get(vs.getId());				
 	}
 	
 	@Test
 	public void createWithZombieTest() throws Exception
 	{
-		final VirtualServerManager manager	= new VirtualServerManager();
+		final VirtualServerDAO manager	= new VirtualServerDAO();
 		final List<VirtualServer> list 		= new ArrayList<VirtualServer>();
 		
 		VirtualServer vs1 = new VirtualServer("zombie", "desc", new URI("http://location.com"), new ArrayList<NameValue>(), new URI("http://notification.com"), "accessKey", "encryptedSecret", new URI("http://owner.com"), "idempotencyKey");
@@ -377,10 +404,10 @@ public class VirtualServerResourceTest {
 	@Test
 	public void returnUrisOfTwoCreatedVMs() throws InvalidParameterException, Exception {
 		
-		final VirtualServer v1 = createFakeDataVirtualServer();
+		final VirtualServer v1 = Utils.createFakeDataVirtualServer();
 		v1.setUri(new URI("http://localhost/server/1") );
 
-		final VirtualServer v2 = createFakeDataVirtualServer();
+		final VirtualServer v2 = Utils.createFakeDataVirtualServer();
 		v2.setUri(new URI("http://localhost/server/2") );
 		
 		VirtualServerResource resource = new VirtualServerResource() {
@@ -413,47 +440,6 @@ public class VirtualServerResourceTest {
 		assertEquals(2, createResponse.vmList.length);
 		assertEquals(v1.getUri(), createResponse.vmList[0]);
 		assertEquals(v2.getUri(), createResponse.vmList[1]);
-	}
-	
-	
-	private VirtualServer createFakeDataVirtualServer() {
-		URI uri = null;
-		try {
-			uri = new URI("http://localhost/");
-		} catch (URISyntaxException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		VirtualServer vs = new VirtualServer("", "", uri, new ArrayList<NameValue>(), uri, "", "", "", "", uri, "");
-		return vs;
-	}
-	
-	//Helper that communicate with database for virtual server objects
-	public static class VirtualServerManager extends AbstractManager<VirtualServer> {
-
-		@Override
-		protected URI myPath()
-		{
-			return UriBuilder.fromUri(Resource.get("baseURI", "http://localhost:8889/resources")).path("virtualServer").build();
-		}
-		
-		@Override
-		public GenericModelDao<VirtualServer> itemDaoFactory()
-		{
-			return new ServiceModelDao<VirtualServer>(VirtualServer.class);
-		}
-		
-		protected void add (VirtualServer vs){
-			super.add(vs);
-		}
-		
-		protected void delete (VirtualServer vs){
-			super.delete(vs);
-		}
-		
-		protected VirtualServer get(Long id){
-			return super.get(id);
-		}
-	}
+	}	
 
 }
