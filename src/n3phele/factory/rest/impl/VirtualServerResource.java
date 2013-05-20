@@ -614,7 +614,7 @@ public class VirtualServerResource {
 			
 			if (virtualServer.getStatus().equals("terminated"))
 			{
-				logger.warn("Instance " + virtualServer.getName() + " terminated .. purging");
+				logger.info("Instance " + virtualServer.getName() + " terminated .. purging");
 				delete(virtualServer);
 				return;
 			}
@@ -651,32 +651,32 @@ public class VirtualServerResource {
 						if(p.getKey().equalsIgnoreCase("publicIpAddress" ))
 						{
 							publicIP = p.getValue();
-							logger.warn("Name: "+p.getKey()+" ,Value: "+p.getValue());
+							logger.info("Name: "+p.getKey()+" ,Value: "+p.getValue());
 						}
 						if(p.getKey().equalsIgnoreCase("privateIpAddress" ))
 						{
 							privateIP = p.getValue();
-							logger.warn("Name: "+p.getKey()+" ,Value: "+p.getValue());
+							logger.info("Name: "+p.getKey()+" ,Value: "+p.getValue());
 						}
 					}
 				}
 								
 				if(!(publicIP.equalsIgnoreCase(privateIP)))
 				{
-					logger.warn("IP public is set, updating vs");
+					logger.info("IP public is set, updating vs");
 					if (updateStatus(virtualServer, currentStatus))
 						update(virtualServer);
 				}
 
 				if (virtualServer.getStatus().equals(VirtualServerStatus.terminated))
 				{
-					logger.warn("Instance " + virtualServer.getInstanceId() + " terminated .. purging");
+					logger.info("Instance " + virtualServer.getInstanceId() + " terminated .. purging");
 					delete(virtualServer);
 					return;
 				}
 			} else
 			{
-				logger.warn("Instance " + virtualServer.getInstanceId() + " not found, assumed terminated .. purging");
+				logger.info("Instance " + virtualServer.getInstanceId() + " not found, assumed terminated .. purging");
 				delete(virtualServer);
 				return;
 			}
@@ -734,7 +734,7 @@ public class VirtualServerResource {
 			virtualServer.setStatus(currentStatus);
 		} else
 		{
-			logger.warn("Instance " + virtualServer.getInstanceId() + " not found, assumed terminated ..");
+			logger.info("Instance " + virtualServer.getInstanceId() + " not found, assumed terminated ..");
 			virtualServer.setStatus(VirtualServerStatus.terminated);
 		}
 	}
@@ -849,7 +849,7 @@ public class VirtualServerResource {
 
 				if (isDeleted)
 				{
-					logger.warn("Instance " + virtualServer.getInstanceId() + "deleted");
+					logger.info("Instance " + virtualServer.getInstanceId() + "deleted");
 					if (updateStatus(virtualServer, VirtualServerStatus.terminated))
 						update(virtualServer);
 					
@@ -1000,19 +1000,23 @@ public class VirtualServerResource {
 		if (notification == null)
 			return;
 
-		if (client == null)
-		{
-			client = Client.create();
-		}
-		WebResource resource = client.resource(virtualServer.getNotification());
-
-		ClientResponse response = resource.queryParam("source", virtualServer.getUri().toString()).queryParam("oldStatus", oldStatus.toString()).queryParam("newStatus", newStatus.toString()).type(MediaType.TEXT_PLAIN).get(ClientResponse.class);
-		logger.info("Notificaion status " + response.getStatus());
-		if (response.getStatus() == 410)
-		{
-			logger.info("VM GONE .. killing " + virtualServer.getUri() + " silencing reporting to " + virtualServer.getNotification());
-			virtualServer.setNotification(null);
-			deleteInstance(virtualServer);
+		try{
+			if (client == null)
+			{
+				client = Client.create();
+			}
+			WebResource resource = client.resource(virtualServer.getNotification());
+	
+			ClientResponse response = resource.queryParam("source", virtualServer.getUri().toString()).queryParam("oldStatus", oldStatus.toString()).queryParam("newStatus", newStatus.toString()).type(MediaType.TEXT_PLAIN).get(ClientResponse.class);
+			logger.info("Notificaion status " + response.getStatus());
+			if (response.getStatus() == 410)
+			{
+				logger.info("VM GONE .. killing " + virtualServer.getUri() + " silencing reporting to " + virtualServer.getNotification());
+				virtualServer.setNotification(null);
+				deleteInstance(virtualServer);
+			}
+		}catch(Exception e){
+			logger.warn(e.getMessage());
 		}
 	}
 
@@ -1030,7 +1034,7 @@ public class VirtualServerResource {
 
 		if (newKey != null)
 		{
-			logger.warn("Got " + newKey.toString());
+			logger.info("Got " + newKey.toString());
 			sendNotificationEmail(newKey, email, firstName, lastName, location);
 			return true;
 		}
