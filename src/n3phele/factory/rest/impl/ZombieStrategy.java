@@ -17,23 +17,9 @@ public class ZombieStrategy {
 		String instanceId = virtualServer.getInstanceId();
 		try
 		{
-			virtualServer.setInstanceId(null);
-			virtualServer.setZombie(true);
-			resource.updateStatus(virtualServer, VirtualServerStatus.terminated);
-			resource.update(virtualServer);
+			updateCloudVMInfoAsZombie(virtualServer, resource, hpCloudManager);		
 
-			/**
-			 * Now we're using metadata to set instance behavior (zombie or debug)
-			 */
-			String locationId = resource.getLocationId(virtualServer);
-			Map<String, String> tags = new HashMap<String, String>();
-			tags.put("n3phele-name", virtualServer.getName());
-			tags.put("n3phele-behavior", "zombie");
-			tags.put("n3phele-factory", Resource.get("factoryName", resource.FACTORY_NAME));
-			tags.put("n3phele-uri", "");
-
-			hpCloudManager.putServerTags(virtualServer.getInstanceId(), locationId, tags);			
-			hpCloudManager.rebootNode(locationId, virtualServer.getInstanceId(), RebootType.SOFT);
+			updateVMState(virtualServer, resource);
 
 			/**
 			 * Create a new zombie virtualServer object, and then set item
@@ -61,6 +47,30 @@ public class ZombieStrategy {
 			throw e;
 		}
 
+	}
+
+	protected void updateCloudVMInfoAsZombie(VirtualServer virtualServer,
+			VirtualServerResource resource, HPCloudManager hpCloudManager) {
+		/**
+		 * Now we're using metadata to set instance behavior (zombie or debug)
+		 */
+		String locationId = resource.getLocationId(virtualServer);
+		Map<String, String> tags = new HashMap<String, String>();
+		tags.put("n3phele-name", virtualServer.getName());
+		tags.put("n3phele-behavior", "zombie");
+		tags.put("n3phele-factory", Resource.get("factoryName", resource.FACTORY_NAME));
+		tags.put("n3phele-uri", "");
+
+		hpCloudManager.putServerTags(virtualServer.getInstanceId(), locationId, tags);			
+		hpCloudManager.rebootNode(locationId, virtualServer.getInstanceId(), RebootType.SOFT);
+	}
+
+	protected void updateVMState(VirtualServer virtualServer,
+			VirtualServerResource resource) {
+		virtualServer.setInstanceId(null);
+		virtualServer.setZombie(true);
+		resource.updateStatus(virtualServer, VirtualServerStatus.terminated);
+		resource.update(virtualServer);
 	}
 
 }

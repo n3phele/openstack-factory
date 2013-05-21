@@ -157,7 +157,7 @@ public class VirtualServerResourceTest {
 	@Test
 	public void virtualServerListTest() {
 
-		VirtualServerDAO manager = new VirtualServerDAO();
+		VirtualServerTestDAO manager = new VirtualServerTestDAO();
 				
 		//Add a virtual server object to database
 		VirtualServer vs = Utils.createFakeDataVirtualServer();
@@ -174,7 +174,7 @@ public class VirtualServerResourceTest {
 	@Test
 	public void virtualServerGetTest() {
 
-		VirtualServerDAO manager = new VirtualServerDAO();
+		VirtualServerTestDAO manager = new VirtualServerTestDAO();
 				
 		//Add a virtual server object to database
 		VirtualServer vs = Utils.createFakeDataVirtualServer();
@@ -204,7 +204,7 @@ public class VirtualServerResourceTest {
 	@Test(expected = NotFoundException.class)
 	public void virtualServerKillCallsSoftKillVMWhenNoErrorTest() {
 
-		final VirtualServerDAO manager = new VirtualServerDAO();
+		final VirtualServerTestDAO manager = new VirtualServerTestDAO();
 				
 		//Add a virtual server object to database
 		VirtualServer vs = Utils.createFakeDataVirtualServer();
@@ -237,7 +237,7 @@ public class VirtualServerResourceTest {
 	@Test(expected = NotFoundException.class)
 	public void virtualServerKillCallsTerminateVMWhenErrorTest() {
 
-		final VirtualServerDAO manager = new VirtualServerDAO();
+		final VirtualServerTestDAO manager = new VirtualServerTestDAO();
 				
 		//Add a virtual server object to database
 		VirtualServer vs = Utils.createFakeDataVirtualServer();
@@ -270,7 +270,7 @@ public class VirtualServerResourceTest {
 	@Test
 	public void createWithZombieTest() throws Exception
 	{
-		final VirtualServerDAO manager	= new VirtualServerDAO();
+		final VirtualServerTestDAO manager	= new VirtualServerTestDAO();
 		final List<VirtualServer> list 		= new ArrayList<VirtualServer>();
 		
 		VirtualServer vs1 = new VirtualServer("zombie", "desc", new URI("http://location.com"), new ArrayList<NameValue>(), new URI("http://notification.com"), "accessKey", "encryptedSecret", new URI("http://owner.com"), "idempotencyKey");

@@ -54,7 +54,7 @@ public class ZombieStrategiesTest {
 		HPCloudManager hpCloudManager = mock(HPCloudManager.class);
 		
 		//Create a VM on database
-		VirtualServerDAO dao = new VirtualServerDAO();		
+		VirtualServerTestDAO dao = new VirtualServerTestDAO();		
 		VirtualServer virtualServer = Utils.createFakeDataVirtualServer();
 		virtualServer.setName("original");
 		dao.add(virtualServer);		
@@ -75,7 +75,7 @@ public class ZombieStrategiesTest {
 		HPCloudManager hpCloudManager = mock(HPCloudManager.class);
 		
 		//Create a VM on database
-		VirtualServerDAO dao = new VirtualServerDAO();		
+		VirtualServerTestDAO dao = new VirtualServerTestDAO();		
 		VirtualServer virtualServer = Utils.createFakeDataVirtualServer();
 		virtualServer.setInstanceId("12123");
 		dao.add(virtualServer);
@@ -84,10 +84,11 @@ public class ZombieStrategiesTest {
 		
 		strategy.makeZombie(virtualServer, resource, hpCloudManager);
 		
+		//Expected hash
 		Map<String, String> tags = new HashMap<String, String>();
 		tags.put("n3phele-name", virtualServer.getName());
 		tags.put("n3phele-behavior", "zombie");
-		tags.put("n3phele-factory", "nova-factory");
+		tags.put("n3phele-factory", resource.FACTORY_NAME);
 		tags.put("n3phele-uri", "");
 		
 		//Verify if exist a zombie VM on database

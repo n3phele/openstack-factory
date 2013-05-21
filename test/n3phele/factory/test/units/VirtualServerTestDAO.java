@@ -11,7 +11,7 @@ import n3phele.service.model.core.GenericModelDao;
 import n3phele.service.model.core.VirtualServer;
 
 //Helper that communicate with database for virtual server objects
-public class VirtualServerDAO extends AbstractManager<VirtualServer> {
+public class VirtualServerTestDAO extends AbstractManager<VirtualServer> {
 
 	@Override
 	protected URI myPath()
