@@ -49,6 +49,8 @@ import n3phele.factory.hpcloud.HPCloudCreateServerRequest;
 import n3phele.factory.hpcloud.HPCloudCredentials;
 import n3phele.factory.hpcloud.HPCloudManager;
 import n3phele.factory.model.ServiceModelDao;
+import n3phele.factory.strategy.DebugStrategy;
+import n3phele.factory.strategy.ZombieStrategy;
 import n3phele.service.core.NotFoundException;
 import n3phele.service.core.Resource;
 import n3phele.service.model.core.AbstractManager;
@@ -63,9 +65,7 @@ import n3phele.service.model.core.ParameterType;
 import n3phele.service.model.core.TypedParameter;
 import n3phele.service.model.core.VirtualServer;
 
-import org.jclouds.openstack.nova.v2_0.domain.Image;
 import org.jclouds.openstack.nova.v2_0.domain.KeyPair;
-import org.jclouds.openstack.nova.v2_0.domain.RebootType;
 import org.jclouds.openstack.nova.v2_0.domain.SecurityGroup;
 import org.jclouds.openstack.nova.v2_0.domain.Server;
 import org.jclouds.openstack.nova.v2_0.domain.ServerCreated;
@@ -74,14 +74,11 @@ import org.slf4j.LoggerFactory;
 
 import com.google.apphosting.api.DeadlineExceededException;
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.VoidWork;
 import com.googlecode.objectify.Work;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.core.util.Base64;
-
-
 
 /** EC2 Virtual Server Resource manages the lifecycle of virtual machines on Amazon EC2 (or compatible) clouds.
  * @author Nigel Cook
@@ -95,9 +92,14 @@ public class VirtualServerResource {
 	
 	public final static String FACTORY_NAME	= "nova-factory";
 	final Logger logger = LoggerFactory.getLogger(VirtualServerResource.class);
+	
+	private ZombieStrategy zombieStrategy; 
+	private DebugStrategy debugStrategy;
 
 	public VirtualServerResource()
 	{
+		zombieStrategy = new ZombieStrategy();
+		debugStrategy = new DebugStrategy();
 	}
 
 	@Context
@@ -449,92 +451,30 @@ public class VirtualServerResource {
 			manager.delete(virtualServer);
 		}
 	}
-	
-	private void makeZombie(VirtualServer virtualServer) throws Exception
-	{
+
+	protected void makeZombie(VirtualServer virtualServer) throws Exception {
+		//FIXME too generic exception handling
 		String instanceId = virtualServer.getInstanceId();
 		try
 		{
-			HPCloudManager hpCloudManager = getNewHPCloudManager(virtualServer.getAccessKey(), virtualServer.getEncryptedKey());
-			virtualServer.setInstanceId(null);
-			virtualServer.setZombie(true);
-			updateStatus(virtualServer, VirtualServerStatus.terminated);
-			update(virtualServer);
-
-			/**
-			 * Now we're using metadata to set instance behavior (zombie or debug)
-			 */
-			String locationId = getLocationId(virtualServer);
-			Map<String, String> tags = new HashMap<String, String>();
-			tags.put("n3phele-name", virtualServer.getName());
-			tags.put("n3phele-behavior", "zombie");
-			tags.put("n3phele-factory", Resource.get("factoryName", FACTORY_NAME));
-			tags.put("n3phele-uri", "");
-
-			hpCloudManager.putServerTags(virtualServer.getInstanceId(), locationId, tags);
-			
-			hpCloudManager.rebootNode(locationId, virtualServer.getInstanceId(), RebootType.SOFT);
-
-			/**
-			 * Create a new zombie virtualServer object, and then set item
-			 * instance Id to null. Update item. Update status.
-			 */
-			VirtualServer cloneZombie = new VirtualServer("zombie", virtualServer.getDescription(), virtualServer.getLocation(), virtualServer.getParameters(), null, virtualServer.getAccessKey(), virtualServer.getEncryptedKey(), virtualServer.getOwner(), virtualServer.getIdempotencyKey());
-			cloneZombie.setCreated(virtualServer.getCreated());
-			cloneZombie.setInstanceId(instanceId);
-
-			/**
-			 * The add operation does two writes in order to fix the reference
-			 * URI.
-			 * This creates a race condition for a fetch based on name of zombie
-			 * Similarly, refresh amd update could cause a race condition.
-			 * Updates semantics
-			 * need to be strengthened to fail if the object is not in the
-			 * store, and the check and write wrapped in
-			 * a transaction.
-			 */
-			add(cloneZombie);
-		} catch (Exception e)
+			zombieStrategy.makeZombie(virtualServer, this, getNewHPCloudManager(virtualServer.getAccessKey(), virtualServer.getEncryptedKey()));
+		}
+		catch(Exception e)
 		{
 			logger.error("makeZombie delete of instanceId " + instanceId, e);
+			virtualServer.setInstanceId(instanceId);
 			deleteInstance(virtualServer);
 			throw e;
 		}
-
-	}
+	}		
 	
 	private void makeDebug(VirtualServer virtualServer) throws Exception
 	{
 		String instanceId = virtualServer.getInstanceId();
+		//FIXME too generic exception handling
 		try
 		{
-			HPCloudManager hpCloudManager = getNewHPCloudManager(virtualServer.getAccessKey(), virtualServer.getEncryptedKey());
-			virtualServer.setInstanceId(null);
-			virtualServer.setZombie(true);
-			updateStatus(virtualServer, VirtualServerStatus.terminated);
-			update(virtualServer);
-
-			/**
-			 * Now we're using metadata to set instance behavior (zombie or debug)
-			 */
-			String locationId = getLocationId(virtualServer);
-			Map<String, String> tags = new HashMap<String, String>();
-			tags.put("n3phele-name", virtualServer.getName());
-			tags.put("n3phele-behavior", "debug");
-			tags.put("n3phele-factory", Resource.get("factoryName", FACTORY_NAME));
-			tags.put("n3phele-uri", "");
-
-			hpCloudManager.putServerTags(virtualServer.getInstanceId(), locationId, tags);
-
-			/**
-			 * Create a new zombie virtualServer object, and then set item
-			 * instance Id to null. Update item. Update status.
-			 */
-			VirtualServer clone = new VirtualServer("debug", virtualServer.getDescription(), virtualServer.getLocation(), virtualServer.getParameters(), null, virtualServer.getAccessKey(), virtualServer.getEncryptedKey(), virtualServer.getOwner(), virtualServer.getIdempotencyKey());
-			clone.setCreated(virtualServer.getCreated());
-			clone.setInstanceId(instanceId);
-
-			add(clone);
+			debugStrategy.makeDebug(virtualServer, this, getNewHPCloudManager(virtualServer.getAccessKey(), virtualServer.getEncryptedKey()));
 		} catch (Exception e)
 		{
 			logger.error("makeDebug delete of instanceId "	+ instanceId, e);
@@ -967,7 +907,7 @@ public class VirtualServerResource {
 		return (a.equals(b));
 	}
 	
-	protected boolean updateStatus(VirtualServer virtualServer, VirtualServerStatus newStatus)
+	public boolean updateStatus(VirtualServer virtualServer, VirtualServerStatus newStatus)
 	{
 		VirtualServerStatus oldStatus = virtualServer.getStatus();
 		if (oldStatus.equals(newStatus))

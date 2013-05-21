@@ -1,9 +1,10 @@
-package n3phele.factory.rest.impl;
+package n3phele.factory.strategy;
 
 import java.util.HashMap;
 import java.util.Map;
 
 import n3phele.factory.hpcloud.HPCloudManager;
+import n3phele.factory.rest.impl.VirtualServerResource;
 import n3phele.service.core.Resource;
 import n3phele.service.model.core.VirtualServer;
 import n3phele.service.model.core.VirtualServerStatus;
@@ -12,41 +13,32 @@ import org.jclouds.openstack.nova.v2_0.domain.RebootType;
 
 public class ZombieStrategy {
 
-	public void makeZombie(VirtualServer virtualServer, VirtualServerResource resource, HPCloudManager hpCloudManager) throws Exception
+	public void makeZombie(VirtualServer virtualServer, VirtualServerResource resource, HPCloudManager hpCloudManager)
 	{
 		String instanceId = virtualServer.getInstanceId();
-		try
-		{
-			updateCloudVMInfoAsZombie(virtualServer, resource, hpCloudManager);		
+		updateCloudVMInfoAsZombie(virtualServer, resource, hpCloudManager);		
 
-			updateVMState(virtualServer, resource);
+		updateVMState(virtualServer, resource);
 
-			/**
-			 * Create a new zombie virtualServer object, and then set item
-			 * instance Id to null. Update item. Update status.
-			 */
-			VirtualServer cloneZombie = new VirtualServer("zombie", virtualServer.getDescription(), virtualServer.getLocation(), virtualServer.getParameters(), null, virtualServer.getAccessKey(), virtualServer.getEncryptedKey(), virtualServer.getOwner(), virtualServer.getIdempotencyKey());
-			cloneZombie.setCreated(virtualServer.getCreated());
-			cloneZombie.setInstanceId(instanceId);
+		/**
+		 * Create a new zombie virtualServer object, and then set item
+		 * instance Id to null. Update item. Update status.
+		 */
+		VirtualServer cloneZombie = new VirtualServer("zombie", virtualServer.getDescription(), virtualServer.getLocation(), virtualServer.getParameters(), null, virtualServer.getAccessKey(), virtualServer.getEncryptedKey(), virtualServer.getOwner(), virtualServer.getIdempotencyKey());
+		cloneZombie.setCreated(virtualServer.getCreated());
+		cloneZombie.setInstanceId(instanceId);
 
-			/**
-			 * The add operation does two writes in order to fix the reference
-			 * URI.
-			 * This creates a race condition for a fetch based on name of zombie
-			 * Similarly, refresh amd update could cause a race condition.
-			 * Updates semantics
-			 * need to be strengthened to fail if the object is not in the
-			 * store, and the check and write wrapped in
-			 * a transaction.
-			 */
-			resource.add(cloneZombie);
-		} catch (Exception e)
-		{
-			resource.logger.error("makeZombie delete of instanceId " + instanceId, e);
-			resource.deleteInstance(virtualServer);
-			throw e;
-		}
-
+		/**
+		 * The add operation does two writes in order to fix the reference
+		 * URI.
+		 * This creates a race condition for a fetch based on name of zombie
+		 * Similarly, refresh amd update could cause a race condition.
+		 * Updates semantics
+		 * need to be strengthened to fail if the object is not in the
+		 * store, and the check and write wrapped in
+		 * a transaction.
+		 */
+		resource.add(cloneZombie);
 	}
 
 	protected void updateCloudVMInfoAsZombie(VirtualServer virtualServer,
