@@ -236,22 +236,30 @@ public class VirtualServerResource {
 	}
 
 
-	protected ArrayList<VirtualServer> createOneOrMoreVMs(
+	public ArrayList<VirtualServer> createOneOrMoreVMs(
 			ExecutionFactoryCreateRequest request,
 			HPCloudCreateServerRequest hpCloudRequest, Date epoch) {
-				
-		VirtualServer tempVirtualServer = new VirtualServer(request.name, request.description, request.location, request.parameters,
-				request.notification, request.accessKey, request.encryptedSecret,
-				request.owner, request.idempotencyKey);
+			
+		boolean createdFromZombie = false;
 		
-		ArrayList<VirtualServer> virtualServerList;
-		if( hpCloudRequest.nodeCount == 1 && createWithZombie(tempVirtualServer) )
+		ArrayList<VirtualServer> virtualServerList = null;
+		
+		if(hpCloudRequest.nodeCount == 1)
 		{
-			logger.info("Only one zombie virtualServer");
-			virtualServerList 	= new ArrayList<VirtualServer>(1);					
-			virtualServerList.	add(tempVirtualServer);
+			VirtualServer tempVirtualServer = new VirtualServer(request.name, request.description, request.location, request.parameters,
+					request.notification, request.accessKey, request.encryptedSecret,
+					request.owner, request.idempotencyKey);
+			
+			createdFromZombie = createWithZombie(tempVirtualServer);
+			if(createdFromZombie)
+			{
+				logger.info("Only one zombie virtualServer");
+				virtualServerList 	= new ArrayList<VirtualServer>(1);					
+				virtualServerList.	add(tempVirtualServer);			
+			}
 		}
-		else
+		
+		if( !createdFromZombie )
 		{
 			HPCloudManager hpCloudManager 			= getNewHPCloudManager(request.accessKey, request.encryptedSecret);
 			List<ServerCreated> resultServerList	= hpCloudManager.createServerRequest(hpCloudRequest);
@@ -542,7 +550,7 @@ public class VirtualServerResource {
 	 * @param virtualServer object to update
 	 */
 	protected void updateVirtualServer(VirtualServer virtualServer) throws IllegalArgumentException
-	{
+	{		
 		HPCloudManager hpCloudManager = getNewHPCloudManager(virtualServer.getAccessKey(), virtualServer.getEncryptedKey());
 		String instanceId = virtualServer.getInstanceId();
 		boolean madeIntoZombie = virtualServer.isZombie();
@@ -812,7 +820,7 @@ public class VirtualServerResource {
 
 	}
 	
-	protected boolean createWithZombie(VirtualServer virtualServer)
+	public boolean createWithZombie(VirtualServer virtualServer)
 	{
 		logger.info("Entered createWithZombie");
 		List<VirtualServer> zombies = getZombie();
@@ -874,6 +882,13 @@ public class VirtualServerResource {
 							terminate(zombieVirtualServer);
 							continue;
 						}
+						
+						//The instance object does not exist yet, add it
+						if(virtualServer.getId() == null)
+						{
+							add(virtualServer);
+						}						
+						
 						virtualServer.setInstanceId(zombieVirtualServer.getInstanceId());
 						virtualServer.setCreated(zombieVirtualServer.getCreated());
 						updateVirtualServer(virtualServer);
