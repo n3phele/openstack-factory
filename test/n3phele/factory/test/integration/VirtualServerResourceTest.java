@@ -120,6 +120,17 @@ public class VirtualServerResourceTest {
 		request.parameters = parameters;
 
 		ClientResponse result = resource.post(ClientResponse.class, request);
+		assertEquals(201, result.getStatus());
+	}
+	
+	//Example
+	//@Test
+	public void testDeleteVM() throws UnsupportedEncodingException, NoSuchAlgorithmException, URISyntaxException {
+		WebResource resource =  webResource.path("/19");
+		resource.queryParam("debug", "false");
+		resource.queryParam("error", "true");
+		
+		resource.delete();
 	}
 
 }
