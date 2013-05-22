@@ -236,7 +236,7 @@ public class VirtualServerResource {
 	}
 
 
-	public ArrayList<VirtualServer> createOneOrMoreVMs(
+	protected ArrayList<VirtualServer> createOneOrMoreVMs(
 			ExecutionFactoryCreateRequest request,
 			HPCloudCreateServerRequest hpCloudRequest, Date epoch) {
 			
