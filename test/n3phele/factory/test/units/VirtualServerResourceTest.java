@@ -395,13 +395,13 @@ public class VirtualServerResourceTest {
 		vs7.setParameters(p);
 		vs7.setId(07l);
 		
-		assertEquals("vs1 should be a expired zombie", true, Whitebox.invokeMethod(virtualServerResource, "checkForZombieExpiry", vs1));
-		assertEquals("vs2 should be a expired debug", true, Whitebox.invokeMethod(virtualServerResource, "checkForZombieExpiry", vs2));
-		assertEquals("vs3 should not be a expired zombie or debug", false, Whitebox.invokeMethod(virtualServerResource, "checkForZombieExpiry", vs3));
-		assertEquals("vs4 should not be a expired zombie or debug", false, Whitebox.invokeMethod(virtualServerResource, "checkForZombieExpiry", vs4));
-		assertEquals("vs5 should not be a expired zombie or debug", false, Whitebox.invokeMethod(virtualServerResource, "checkForZombieExpiry", vs5));
-		assertEquals("vs6 should not be a expired zombie or debug", false, Whitebox.invokeMethod(virtualServerResource, "checkForZombieExpiry", vs6));
-		assertEquals("vs7 should be a expired zombie", true, Whitebox.invokeMethod(virtualServerResource, "checkForZombieExpiry", vs7));
+		assertEquals("vs1 should be a expired zombie", true, virtualServerResource.checkForZombieAndDebugExpiry(vs1));
+		assertEquals("vs2 should be a expired debug", true, virtualServerResource.checkForZombieAndDebugExpiry(vs2));
+		assertEquals("vs3 should not be a expired zombie or debug", false, virtualServerResource.checkForZombieAndDebugExpiry(vs3));
+		assertEquals("vs4 should not be a expired zombie or debug", false, virtualServerResource.checkForZombieAndDebugExpiry(vs4));
+		assertEquals("vs5 should not be a expired zombie or debug", false, virtualServerResource.checkForZombieAndDebugExpiry(vs5));
+		assertEquals("vs6 should not be a expired zombie or debug", false, virtualServerResource.checkForZombieAndDebugExpiry(vs6));
+		assertEquals("vs7 should be a expired zombie", true, virtualServerResource.checkForZombieAndDebugExpiry(vs7));
 	}
 
 	@Test
@@ -446,7 +446,7 @@ public class VirtualServerResourceTest {
 	}	
 	
 	@Test
-	public void checkDebugVirtualServerExpiryTest() throws Exception
+	public void checkZombieVirtualServerExpiryTest() throws Exception
 	{
 		ZombieStrategy zombieStrategy = new ZombieStrategy();
 		zombieStrategy.setMinutesExpirationTime(5);
@@ -462,6 +462,7 @@ public class VirtualServerResourceTest {
 		VirtualServer virtualServer = Utils.createFakeDataVirtualServer();
 		virtualServer.setInstanceId("1");
 		virtualServer.setName("zombie");
+		virtualServer.setStatus(VirtualServerStatus.running);
 		ArrayList<NameValue> parameters = new ArrayList<NameValue>();
 		parameters.add(new NameValue("n3phele-behavior","zombie"));
 		virtualServer.setParameters(parameters);
@@ -472,6 +473,36 @@ public class VirtualServerResourceTest {
 		virtualServerResource.checkForZombieAndDebugExpiry(virtualServer);
 		
 		Mockito.verify(cloudManager).terminateNode(Mockito.anyString(), Mockito.eq(virtualServer.getInstanceId()));
+	}
+	
+	@Test
+	public void checkZombieVirtualServerNonExpiryTest() throws Exception
+	{
+		ZombieStrategy zombieStrategy = new ZombieStrategy();
+		zombieStrategy.setMinutesExpirationTime(5);
+
+		final HPCloudManager cloudManager = Mockito.mock(HPCloudManager.class);
+		VirtualServerResource virtualServerResource = new VirtualServerResource(zombieStrategy, new DebugStrategy()) {
+			protected HPCloudManager getNewHPCloudManager(String acessKey, String encryptedKey)
+			{
+				return cloudManager;
+			}			
+		};
+		
+		VirtualServer virtualServer = Utils.createFakeDataVirtualServer();
+		virtualServer.setInstanceId("1");
+		virtualServer.setName("zombie");
+		virtualServer.setStatus(VirtualServerStatus.running);
+		ArrayList<NameValue> parameters = new ArrayList<NameValue>();
+		parameters.add(new NameValue("n3phele-behavior","zombie"));
+		virtualServer.setParameters(parameters);
+		Calendar calendar = Calendar.getInstance();
+		calendar.add(Calendar.MINUTE, -4);
+		virtualServer.setCreated(calendar.getTime());
+		
+		virtualServerResource.checkForZombieAndDebugExpiry(virtualServer);
+		
+		Mockito.verify(cloudManager, Mockito.times(0)).terminateNode(Mockito.anyString(), Mockito.eq(virtualServer.getInstanceId()));
 	}
 
 }
