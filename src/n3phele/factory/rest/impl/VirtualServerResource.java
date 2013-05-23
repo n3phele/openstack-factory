@@ -752,7 +752,7 @@ public class VirtualServerResource {
 							updateVirtualServer(virtualServer);
 					}
 					catch (Exception e) {
-						logger.warn(virtualServer.getUri()+" refresh failed. Killing..",e);
+						logger.warn( " refresh failed. Killing..",e);
 						try {
 							terminate(virtualServer);
 						} catch (Exception another) {
