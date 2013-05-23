@@ -7,6 +7,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -17,6 +18,8 @@ import n3phele.factory.hpcloud.HPCloudCreateServerRequest;
 import n3phele.factory.hpcloud.HPCloudManager;
 import n3phele.factory.model.ServiceModelDao;
 import n3phele.factory.rest.impl.VirtualServerResource;
+import n3phele.factory.strategy.DebugStrategy;
+import n3phele.factory.strategy.ZombieStrategy;
 import n3phele.service.core.NotFoundException;
 import n3phele.service.core.Resource;
 import n3phele.service.model.core.AbstractManager;
@@ -441,5 +444,34 @@ public class VirtualServerResourceTest {
 		assertEquals(v1.getUri(), createResponse.vmList[0]);
 		assertEquals(v2.getUri(), createResponse.vmList[1]);
 	}	
+	
+	@Test
+	public void checkDebugVirtualServerExpiryTest() throws Exception
+	{
+		ZombieStrategy zombieStrategy = new ZombieStrategy();
+		zombieStrategy.setMinutesExpirationTime(5);
+
+		final HPCloudManager cloudManager = Mockito.mock(HPCloudManager.class);
+		VirtualServerResource virtualServerResource = new VirtualServerResource(zombieStrategy, new DebugStrategy()) {
+			protected HPCloudManager getNewHPCloudManager(String acessKey, String encryptedKey)
+			{
+				return cloudManager;
+			}			
+		};
+		
+		VirtualServer virtualServer = Utils.createFakeDataVirtualServer();
+		virtualServer.setInstanceId("1");
+		virtualServer.setName("zombie");
+		ArrayList<NameValue> parameters = new ArrayList<NameValue>();
+		parameters.add(new NameValue("n3phele-behavior","zombie"));
+		virtualServer.setParameters(parameters);
+		Calendar calendar = Calendar.getInstance();
+		calendar.add(Calendar.MINUTE, -6);
+		virtualServer.setCreated(calendar.getTime());
+		
+		virtualServerResource.checkForZombieAndDebugExpiry(virtualServer);
+		
+		Mockito.verify(cloudManager).terminateNode(Mockito.anyString(), Mockito.eq(virtualServer.getInstanceId()));
+	}
 
 }

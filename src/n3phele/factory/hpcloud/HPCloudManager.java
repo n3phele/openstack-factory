@@ -24,6 +24,8 @@ import org.jclouds.openstack.nova.v2_0.extensions.SecurityGroupApi;
 import org.jclouds.openstack.nova.v2_0.features.ImageApi;
 import org.jclouds.openstack.nova.v2_0.features.ServerApi;
 import org.jclouds.openstack.nova.v2_0.options.CreateServerOptions;
+import org.jclouds.openstack.nova.v2_0.options.RebuildServerOptions;
+
 import com.google.common.collect.FluentIterable;
 
 /**
@@ -111,6 +113,24 @@ public class HPCloudManager {
 		ServerApi serverApi = mNovaApi.getServerApiForZone(zone);
 		
 		serverApi.reboot(nodeId, rebootType);
+	}
+	
+	/**
+	 * @param zone
+	 * @param nodeId our node identification.
+	 * @param rebuildType 
+	 */
+	public void rebuildNode(String zone, String nodeId)
+	{ 
+		RebuildServerOptions rebuildType = new RebuildServerOptions();
+		/**
+		 * Get server async api
+		 */
+		ServerApi serverApi = mNovaApi.getServerApiForZone(zone);
+		
+		Server s = getServerById(zone, nodeId);
+		rebuildType.withImage(s.getImage().getId().toString());
+		serverApi.rebuild(nodeId, rebuildType);
 	}
 
 	/**

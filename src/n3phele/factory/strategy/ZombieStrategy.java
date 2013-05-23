@@ -1,17 +1,52 @@
 package n3phele.factory.strategy;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
 import n3phele.factory.hpcloud.HPCloudManager;
 import n3phele.factory.rest.impl.VirtualServerResource;
 import n3phele.service.core.Resource;
+import n3phele.service.model.core.NameValue;
 import n3phele.service.model.core.VirtualServer;
 import n3phele.service.model.core.VirtualServerStatus;
 
-import org.jclouds.openstack.nova.v2_0.domain.RebootType;
-
 public class ZombieStrategy {
+	
+	private int minutesExpirationTime;
+	
+	public ZombieStrategy()
+	{
+		//default
+		minutesExpirationTime = 55;
+	}
+
+	public boolean isZombie(VirtualServer virtualServer)
+	{
+		boolean isZombieInstance = virtualServer.getName().equalsIgnoreCase("zombie");
+
+		ArrayList<NameValue> listParameters = virtualServer.getParameters();
+
+		for(NameValue parameter : listParameters)
+		{
+			if( parameter.getKey().equalsIgnoreCase("n3phele-behavior") )
+			{
+				if( parameter.getValue().equalsIgnoreCase("zombie") )
+					isZombieInstance = true;
+				break;
+			}
+		}
+		
+		return isZombieInstance;
+	}
+	
+	public int getMinutesExpirationTime() {
+		return minutesExpirationTime;
+	}
+
+	public void setMinutesExpirationTime(int minutesExpirationTime) {
+		this.minutesExpirationTime = minutesExpirationTime;
+	}
 
 	public void makeZombie(VirtualServer virtualServer, VirtualServerResource resource, HPCloudManager hpCloudManager)
 	{
@@ -53,8 +88,8 @@ public class ZombieStrategy {
 		tags.put("n3phele-factory", Resource.get("factoryName", resource.FACTORY_NAME));
 		tags.put("n3phele-uri", "");
 
-		hpCloudManager.putServerTags(virtualServer.getInstanceId(), locationId, tags);			
-		hpCloudManager.rebootNode(locationId, virtualServer.getInstanceId(), RebootType.SOFT);
+		hpCloudManager.putServerTags(virtualServer.getInstanceId(), locationId, tags);
+		hpCloudManager.rebuildNode(locationId, virtualServer.getInstanceId());
 	}
 
 	protected void updateVMState(VirtualServer virtualServer,

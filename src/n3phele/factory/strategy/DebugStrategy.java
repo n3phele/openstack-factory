@@ -1,15 +1,35 @@
 package n3phele.factory.strategy;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
 import n3phele.factory.hpcloud.HPCloudManager;
 import n3phele.factory.rest.impl.VirtualServerResource;
 import n3phele.service.core.Resource;
+import n3phele.service.model.core.NameValue;
 import n3phele.service.model.core.VirtualServer;
 import n3phele.service.model.core.VirtualServerStatus;
 
 public class DebugStrategy {
+
+	public boolean isDebug(VirtualServer virtualServer)
+	{
+		boolean isDebugInstance = virtualServer.getName().equalsIgnoreCase("debug");
+		ArrayList<NameValue> listParameters = virtualServer.getParameters();
+
+		for(NameValue parameter : listParameters)
+		{
+			if( parameter.getKey().equalsIgnoreCase("n3phele-behavior") )
+			{
+				if( parameter.getValue().equalsIgnoreCase("debug") )
+					isDebugInstance = true;
+				break;
+			}
+		}
+		
+		return isDebugInstance;
+	}
 
 	public void makeDebug(VirtualServer virtualServer, VirtualServerResource resource, HPCloudManager hpCloudManager) throws Exception
 	{

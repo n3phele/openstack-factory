@@ -2,6 +2,7 @@ package n3phele.factory.hpcloud;
 
 import javax.xml.bind.annotation.XmlRootElement;
 
+import n3phele.security.EncryptedCredentials;
 import n3phele.security.EncryptedHPCredentials;
 import n3phele.service.core.Resource;
 
@@ -41,7 +42,20 @@ public class HPCloudCredentials {
 	 */
 	public HPCloudCredentials(String identity, String secretKey) throws Exception
 	{
-		EncryptedHPCredentials creds = new EncryptedHPCredentials( Resource.get("factorySecret", "") );
+		EncryptedCredentials creds = new EncryptedHPCredentials( Resource.get("factorySecret", "") );
+		creds.setCredentials(identity, secretKey);
+		
+		this.identity = creds.getHPAccessKeyId();
+		this.secretKey = creds.getHPSecretKey();
+	}
+	
+	/**
+	 * @param identity A join of TenantName and AccessKey with a ":" between them.
+	 * @param secretKey secretKey associated with AccessKey provided in identity parameter.
+	 */
+	public HPCloudCredentials(String identity, String secretKey, EncryptedCredentials encryptionManager) throws Exception
+	{
+		EncryptedCredentials creds = encryptionManager;
 		creds.setCredentials(identity, secretKey);
 		
 		this.identity = creds.getHPAccessKeyId();

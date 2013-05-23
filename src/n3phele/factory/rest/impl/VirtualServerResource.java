@@ -93,9 +93,15 @@ public class VirtualServerResource {
 	public final static String FACTORY_NAME	= "nova-factory";
 	final Logger logger = LoggerFactory.getLogger(VirtualServerResource.class);
 	
-	private ZombieStrategy zombieStrategy; 
+	private ZombieStrategy zombieStrategy;
 	private DebugStrategy debugStrategy;
-
+	
+	public VirtualServerResource(ZombieStrategy zombieStrategy, DebugStrategy debugStrategy)
+	{
+		this.zombieStrategy = zombieStrategy;
+		this.debugStrategy = debugStrategy;
+	}
+	
 	public VirtualServerResource()
 	{
 		zombieStrategy = new ZombieStrategy();
@@ -691,27 +697,14 @@ public class VirtualServerResource {
 	 * @param virtualsServer virtual server
 	 * @return TRUE if zombie
 	 */
-	private boolean checkForZombieExpiry(VirtualServer virtualServer)
+	public boolean checkForZombieAndDebugExpiry(VirtualServer virtualServer)
 	{
 		/**
 		 * Double-checking if the VirtualServer is a zombie/debug machine.
 		 * We're checking the hpcloud tags AND the database name.
 		 */
-		boolean isDebugInstance = virtualServer.getName().equalsIgnoreCase("debug");
-		boolean isZombieInstance = virtualServer.getName().equalsIgnoreCase("zombie");
-		ArrayList<NameValue> listParameters = virtualServer.getParameters();
-		
-		for(NameValue parameter : listParameters)
-		{
-			if( parameter.getKey().equalsIgnoreCase("n3phele-behavior") )
-			{
-				if( parameter.getValue().equalsIgnoreCase("debug") )
-					isDebugInstance = true;
-				else if( parameter.getValue().equalsIgnoreCase("zombie") )
-					isZombieInstance = true;
-				break;
-			}
-		}
+		boolean isDebugInstance = debugStrategy.isDebug(virtualServer);
+		boolean isZombieInstance = zombieStrategy.isZombie(virtualServer);
 		
 		if(isZombieInstance || isDebugInstance )
 		{
@@ -728,7 +721,7 @@ public class VirtualServerResource {
 			long now 		= new Date().getTime();
 			long age 		= ((now - created)% (60*60*1000))/60000;
 			
-			if(age > 55 || !virtualServer.getStatus().equals(VirtualServerStatus.running) || isDebugInstance || isZombieInstance )
+			if(age > zombieStrategy.getMinutesExpirationTime() || !virtualServer.getStatus().equals(VirtualServerStatus.running) || isDebugInstance || isZombieInstance )
 			{
 				logger.info("Killing "+virtualServer.getName()+" with id "+virtualServer.getInstanceId()+" created "+virtualServer.getCreated());
 				virtualServer.setName(isDebugInstance? "debug" : "zombie");
@@ -755,7 +748,7 @@ public class VirtualServerResource {
 			for (VirtualServer virtualServer : servers.getElements()) {
 	
 					try {
-						if(virtualServer.getUri() != null && !checkForZombieExpiry(virtualServer))
+						if(virtualServer.getUri() != null && !checkForZombieAndDebugExpiry(virtualServer))
 							updateVirtualServer(virtualServer);
 					}
 					catch (Exception e) {
