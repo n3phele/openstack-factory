@@ -721,9 +721,9 @@ public class VirtualServerResource {
 			long now 		= new Date().getTime();
 			long age 		= ((now - created)% (60*60*1000))/60000;
 			
-			if( (age > zombieStrategy.getMinutesExpirationTime() && (isDebugInstance || isZombieInstance) ) || !virtualServer.getStatus().equals(VirtualServerStatus.running)  )
+			if( (age > zombieStrategy.getMinutesExpirationTime() && (isDebugInstance || isZombieInstance) ) )
 			{
-				logger.info("Killing "+virtualServer.getName()+" with id "+virtualServer.getInstanceId()+" created "+virtualServer.getCreated());
+				logger.info("Killing "+virtualServer.getName()+" with id "+virtualServer.getInstanceId()+" created "+virtualServer.getCreated() );
 				virtualServer.setName(isDebugInstance? "debug" : "zombie");
 				update(virtualServer);
 				
