@@ -7,6 +7,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -17,6 +18,8 @@ import n3phele.factory.hpcloud.HPCloudCreateServerRequest;
 import n3phele.factory.hpcloud.HPCloudManager;
 import n3phele.factory.model.ServiceModelDao;
 import n3phele.factory.rest.impl.VirtualServerResource;
+import n3phele.factory.strategy.DebugStrategy;
+import n3phele.factory.strategy.ZombieStrategy;
 import n3phele.service.core.NotFoundException;
 import n3phele.service.core.Resource;
 import n3phele.service.model.core.AbstractManager;
@@ -157,10 +160,10 @@ public class VirtualServerResourceTest {
 	@Test
 	public void virtualServerListTest() {
 
-		VirtualServerManager manager = new VirtualServerManager();
+		VirtualServerTestDAO manager = new VirtualServerTestDAO();
 				
 		//Add a virtual server object to database
-		VirtualServer vs = createFakeDataVirtualServer();
+		VirtualServer vs = Utils.createFakeDataVirtualServer();
 		manager.add(vs);
 		
 		//Test list method return from resource
@@ -174,10 +177,10 @@ public class VirtualServerResourceTest {
 	@Test
 	public void virtualServerGetTest() {
 
-		VirtualServerManager manager = new VirtualServerManager();
+		VirtualServerTestDAO manager = new VirtualServerTestDAO();
 				
 		//Add a virtual server object to database
-		VirtualServer vs = createFakeDataVirtualServer();
+		VirtualServer vs = Utils.createFakeDataVirtualServer();
 		long id = 1111l;
 		vs.setId(id);
 		manager.add(vs);
@@ -202,12 +205,45 @@ public class VirtualServerResourceTest {
 	}
 	
 	@Test(expected = NotFoundException.class)
-	public void virtualServerKillTest() {
+	public void virtualServerKillCallsSoftKillVMWhenNoErrorTest() {
 
-		final VirtualServerManager manager = new VirtualServerManager();
+		final VirtualServerTestDAO manager = new VirtualServerTestDAO();
 				
 		//Add a virtual server object to database
-		VirtualServer vs = createFakeDataVirtualServer();
+		VirtualServer vs = Utils.createFakeDataVirtualServer();
+		long id = 1111l;
+		vs.setId(id);
+		manager.add(vs);
+		
+		VirtualServerResource resource = new VirtualServerResource() {
+			//Do nothing when trying to update reference throw remote call
+			@Override
+			protected void updateVirtualServer(VirtualServer item) throws IllegalArgumentException
+			{
+				
+			}
+			
+			@Override
+			protected void softKill(VirtualServer virtualServer, boolean error)
+			{
+				manager.delete(virtualServer);
+			}
+		};
+		
+		//Send error as false
+		resource.kill(vs.getId(), false, false);		
+		
+		//If virtual server was deleted, this method throws an exception
+		VirtualServer virtualServer = manager.get(vs.getId());				
+	}
+	
+	@Test(expected = NotFoundException.class)
+	public void virtualServerKillCallsTerminateVMWhenErrorTest() {
+
+		final VirtualServerTestDAO manager = new VirtualServerTestDAO();
+				
+		//Add a virtual server object to database
+		VirtualServer vs = Utils.createFakeDataVirtualServer();
 		long id = 1111l;
 		vs.setId(id);
 		manager.add(vs);
@@ -225,25 +261,19 @@ public class VirtualServerResourceTest {
 			{
 				manager.delete(virtualServer);
 			}
-			
-			@Override
-			protected void softKill(VirtualServer virtualServer, boolean error)
-			{
-				manager.delete(virtualServer);
-			}
 		};
 		
-		resource.kill(vs.getId(), false, false);		
+		//Send error as true
+		resource.kill(vs.getId(), false, true);		
 		
 		//If virtual server was deleted, this method throws an exception
-		VirtualServer virtualServer = manager.get(vs.getId());	
-				
+		VirtualServer virtualServer = manager.get(vs.getId());				
 	}
 	
 	@Test
 	public void createWithZombieTest() throws Exception
 	{
-		final VirtualServerManager manager	= new VirtualServerManager();
+		final VirtualServerTestDAO manager	= new VirtualServerTestDAO();
 		final List<VirtualServer> list 		= new ArrayList<VirtualServer>();
 		
 		VirtualServer vs1 = new VirtualServer("zombie", "desc", new URI("http://location.com"), new ArrayList<NameValue>(), new URI("http://notification.com"), "accessKey", "encryptedSecret", new URI("http://owner.com"), "idempotencyKey");
@@ -365,22 +395,22 @@ public class VirtualServerResourceTest {
 		vs7.setParameters(p);
 		vs7.setId(07l);
 		
-		assertEquals("vs1 should be a expired zombie", true, Whitebox.invokeMethod(virtualServerResource, "checkForZombieExpiry", vs1));
-		assertEquals("vs2 should be a expired debug", true, Whitebox.invokeMethod(virtualServerResource, "checkForZombieExpiry", vs2));
-		assertEquals("vs3 should not be a expired zombie or debug", false, Whitebox.invokeMethod(virtualServerResource, "checkForZombieExpiry", vs3));
-		assertEquals("vs4 should not be a expired zombie or debug", false, Whitebox.invokeMethod(virtualServerResource, "checkForZombieExpiry", vs4));
-		assertEquals("vs5 should not be a expired zombie or debug", false, Whitebox.invokeMethod(virtualServerResource, "checkForZombieExpiry", vs5));
-		assertEquals("vs6 should not be a expired zombie or debug", false, Whitebox.invokeMethod(virtualServerResource, "checkForZombieExpiry", vs6));
-		assertEquals("vs7 should be a expired zombie", true, Whitebox.invokeMethod(virtualServerResource, "checkForZombieExpiry", vs7));
+		assertEquals("vs1 should be a expired zombie", true, virtualServerResource.checkForZombieAndDebugExpiry(vs1));
+		assertEquals("vs2 should be a expired debug", true, virtualServerResource.checkForZombieAndDebugExpiry(vs2));
+		assertEquals("vs3 should not be a expired zombie or debug", false, virtualServerResource.checkForZombieAndDebugExpiry(vs3));
+		assertEquals("vs4 should not be a expired zombie or debug", false, virtualServerResource.checkForZombieAndDebugExpiry(vs4));
+		assertEquals("vs5 should not be a expired zombie or debug", false, virtualServerResource.checkForZombieAndDebugExpiry(vs5));
+		assertEquals("vs6 should not be a expired zombie or debug", false, virtualServerResource.checkForZombieAndDebugExpiry(vs6));
+		assertEquals("vs7 should be a expired zombie", true, virtualServerResource.checkForZombieAndDebugExpiry(vs7));
 	}
 
 	@Test
 	public void returnUrisOfTwoCreatedVMs() throws InvalidParameterException, Exception {
 		
-		final VirtualServer v1 = createFakeDataVirtualServer();
+		final VirtualServer v1 = Utils.createFakeDataVirtualServer();
 		v1.setUri(new URI("http://localhost/server/1") );
 
-		final VirtualServer v2 = createFakeDataVirtualServer();
+		final VirtualServer v2 = Utils.createFakeDataVirtualServer();
 		v2.setUri(new URI("http://localhost/server/2") );
 		
 		VirtualServerResource resource = new VirtualServerResource() {
@@ -413,47 +443,66 @@ public class VirtualServerResourceTest {
 		assertEquals(2, createResponse.vmList.length);
 		assertEquals(v1.getUri(), createResponse.vmList[0]);
 		assertEquals(v2.getUri(), createResponse.vmList[1]);
-	}
+	}	
 	
-	
-	private VirtualServer createFakeDataVirtualServer() {
-		URI uri = null;
-		try {
-			uri = new URI("http://localhost/");
-		} catch (URISyntaxException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		VirtualServer vs = new VirtualServer("", "", uri, new ArrayList<NameValue>(), uri, "", "", "", "", uri, "");
-		return vs;
-	}
-	
-	//Helper that communicate with database for virtual server objects
-	public static class VirtualServerManager extends AbstractManager<VirtualServer> {
+	@Test
+	public void checkZombieVirtualServerExpiryTest() throws Exception
+	{
+		ZombieStrategy zombieStrategy = new ZombieStrategy();
+		zombieStrategy.setMinutesExpirationTime(5);
 
-		@Override
-		protected URI myPath()
-		{
-			return UriBuilder.fromUri(Resource.get("baseURI", "http://localhost:8889/resources")).path("virtualServer").build();
-		}
+		final HPCloudManager cloudManager = Mockito.mock(HPCloudManager.class);
+		VirtualServerResource virtualServerResource = new VirtualServerResource(zombieStrategy, new DebugStrategy()) {
+			protected HPCloudManager getNewHPCloudManager(String acessKey, String encryptedKey)
+			{
+				return cloudManager;
+			}			
+		};
 		
-		@Override
-		public GenericModelDao<VirtualServer> itemDaoFactory()
-		{
-			return new ServiceModelDao<VirtualServer>(VirtualServer.class);
-		}
+		VirtualServer virtualServer = Utils.createFakeDataVirtualServer();
+		virtualServer.setInstanceId("1");
+		virtualServer.setName("zombie");
+		virtualServer.setStatus(VirtualServerStatus.running);
+		ArrayList<NameValue> parameters = new ArrayList<NameValue>();
+		parameters.add(new NameValue("n3phele-behavior","zombie"));
+		virtualServer.setParameters(parameters);
+		Calendar calendar = Calendar.getInstance();
+		calendar.add(Calendar.MINUTE, -6);
+		virtualServer.setCreated(calendar.getTime());
 		
-		protected void add (VirtualServer vs){
-			super.add(vs);
-		}
+		virtualServerResource.checkForZombieAndDebugExpiry(virtualServer);
 		
-		protected void delete (VirtualServer vs){
-			super.delete(vs);
-		}
+		Mockito.verify(cloudManager).terminateNode(Mockito.anyString(), Mockito.eq(virtualServer.getInstanceId()));
+	}
+	
+	@Test
+	public void checkZombieVirtualServerNonExpiryTest() throws Exception
+	{
+		ZombieStrategy zombieStrategy = new ZombieStrategy();
+		zombieStrategy.setMinutesExpirationTime(5);
+
+		final HPCloudManager cloudManager = Mockito.mock(HPCloudManager.class);
+		VirtualServerResource virtualServerResource = new VirtualServerResource(zombieStrategy, new DebugStrategy()) {
+			protected HPCloudManager getNewHPCloudManager(String acessKey, String encryptedKey)
+			{
+				return cloudManager;
+			}			
+		};
 		
-		protected VirtualServer get(Long id){
-			return super.get(id);
-		}
+		VirtualServer virtualServer = Utils.createFakeDataVirtualServer();
+		virtualServer.setInstanceId("1");
+		virtualServer.setName("zombie");
+		virtualServer.setStatus(VirtualServerStatus.running);
+		ArrayList<NameValue> parameters = new ArrayList<NameValue>();
+		parameters.add(new NameValue("n3phele-behavior","zombie"));
+		virtualServer.setParameters(parameters);
+		Calendar calendar = Calendar.getInstance();
+		calendar.add(Calendar.MINUTE, -4);
+		virtualServer.setCreated(calendar.getTime());
+		
+		virtualServerResource.checkForZombieAndDebugExpiry(virtualServer);
+		
+		Mockito.verify(cloudManager, Mockito.times(0)).terminateNode(Mockito.anyString(), Mockito.eq(virtualServer.getInstanceId()));
 	}
 
 }

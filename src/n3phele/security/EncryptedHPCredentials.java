@@ -33,7 +33,7 @@ import com.sun.jersey.core.util.Base64;
  * @author Alexandre Leites
  * @author Cristina Scheibler
  */
-public class EncryptedHPCredentials {
+public class EncryptedHPCredentials implements EncryptedCredentials {
 	protected static Logger log = Logger.getLogger(EncryptedHPCredentials.class.getName());
 	
 	private String accessKey;
@@ -45,6 +45,10 @@ public class EncryptedHPCredentials {
 		this.password = passwd;
 	}
 	
+	/* (non-Javadoc)
+	 * @see n3phele.security.CredentialsEncryptor#setCredentials(java.lang.String, java.lang.String)
+	 */
+	@Override
 	public void setCredentials(String encryptedAccessKey, String encryptedSecretKey) throws UnsupportedEncodingException, NoSuchAlgorithmException {
 		this.accessKey = encryptedAccessKey;
 		this.secretKey = encryptedSecretKey;
@@ -113,6 +117,10 @@ public class EncryptedHPCredentials {
 		
 	}
 
+	/* (non-Javadoc)
+	 * @see n3phele.security.CredentialsEncryptor#getHPAccessKeyId()
+	 */
+	@Override
 	public String getHPAccessKeyId() {
 		try {
 			return decrypt(this.accessKey, this.password);
@@ -123,6 +131,10 @@ public class EncryptedHPCredentials {
 		}
 	}
 
+	/* (non-Javadoc)
+	 * @see n3phele.security.CredentialsEncryptor#getHPSecretKey()
+	 */
+	@Override
 	public String getHPSecretKey() {
 		try {
 			return decrypt(this.secretKey, this.password);

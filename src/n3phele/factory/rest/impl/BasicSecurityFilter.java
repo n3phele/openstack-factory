@@ -40,7 +40,7 @@ public class BasicSecurityFilter implements ContainerRequestFilter {
 
     public ContainerRequest filter(ContainerRequest request) {
     	if(securityContext == null || securityContext.getUserPrincipal() == null) {
-    		log.fine("Authentication against path "+request.getPath()+" isSecure "+(_isSecure()?"yes":"no"));
+    		log.info("Authentication against path "+request.getPath()+" isSecure "+(_isSecure()?"yes":"no"));
 	        User user = authenticate(request);
 	        request.setSecurityContext(new Authorizer(user));
     	} else {
@@ -53,14 +53,14 @@ public class BasicSecurityFilter implements ContainerRequestFilter {
         // Extract authentication credentials
         String authentication = request.getHeaderValue(ContainerRequest.AUTHORIZATION);
         if (authentication == null) {
-        	log.fine("Authentication against path "+request.getPath());
+        	log.info("Authentication against path "+request.getPath());
         	if(_isSecure()) {
 	            throw new MappableContainerException
 	                    (new AuthenticationException("Authentication credentials are required", REALM));
         	} else {
         		String cron = request.getHeaderValue("X-AppEngine-Cron");
         		if("true".equalsIgnoreCase(cron)) {
-        			log.fine("user cron authenticated role: admin");
+        			log.info("user cron authenticated role: admin");
         			return new User("cron", "admin");
         		}
         		return null;
@@ -117,7 +117,7 @@ public class BasicSecurityFilter implements ContainerRequestFilter {
             return this.principal;
         }
         public boolean isUserInRole(String role) {
-        	log.fine("Checking role "+role+" with user "+(user==null?"null":"defined"));
+        	log.info("Checking role "+role+" with user "+(user==null?"null":"defined"));
         	if(user == null) throw new MappableContainerException (new AuthenticationException("Authentication credentials are required", REALM));
             return (role.equals(user.role));
         }

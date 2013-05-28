@@ -4,6 +4,7 @@ import static org.jclouds.compute.config.ComputeServiceProperties.TIMEOUT_SCRIPT
 
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
+import static org.jclouds.Constants.*;
 
 import org.jclouds.ContextBuilder;
 import org.jclouds.compute.ComputeService;
@@ -32,7 +33,9 @@ public class JCloudComputeFactory implements CloudFactory {
 	{
 		Properties properties = new Properties();
 		long scriptTimeout = TimeUnit.MILLISECONDS.convert(20, TimeUnit.MINUTES);
-		properties.setProperty(TIMEOUT_SCRIPT_COMPLETE, scriptTimeout + "");
+		properties.setProperty(TIMEOUT_SCRIPT_COMPLETE, scriptTimeout + "");		
+		properties.setProperty(PROPERTY_CONNECTION_TIMEOUT, 10000 + "");
+		properties.setProperty(PROPERTY_REQUEST_TIMEOUT, 10000 + "");
 		properties.setProperty("jclouds.modules","org.jclouds.gae.config.AsyncGoogleAppEngineConfigurationModule");
 		properties.setProperty("jclouds.keystone.credential-type", "apiAccessKeyCredentials");
 	
