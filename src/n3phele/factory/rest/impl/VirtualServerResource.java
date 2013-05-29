@@ -472,6 +472,7 @@ public class VirtualServerResource {
 		try
 		{
 			zombieStrategy.makeZombie(virtualServer, this, getNewHPCloudManager(virtualServer.getAccessKey(), virtualServer.getEncryptedKey()));
+			logger.info("created zombie instance of instance " + instanceId);
 		}
 		catch(Exception e)
 		{

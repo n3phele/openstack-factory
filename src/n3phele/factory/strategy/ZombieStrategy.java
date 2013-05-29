@@ -89,7 +89,7 @@ public class ZombieStrategy {
 		tags.put("n3phele-uri", "");
 
 		hpCloudManager.putServerTags(virtualServer.getInstanceId(), locationId, tags);
-		hpCloudManager.rebuildNode(locationId, virtualServer.getInstanceId());
+		//hpCloudManager.rebuildNode(locationId, virtualServer.getInstanceId());
 	}
 
 	protected void updateVMState(VirtualServer virtualServer,
