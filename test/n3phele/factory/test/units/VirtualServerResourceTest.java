@@ -12,22 +12,17 @@ import java.util.Date;
 import java.util.List;
 
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.UriBuilder;
 
 import n3phele.factory.hpcloud.HPCloudCreateServerRequest;
 import n3phele.factory.hpcloud.HPCloudManager;
-import n3phele.factory.model.ServiceModelDao;
 import n3phele.factory.rest.impl.VirtualServerResource;
 import n3phele.factory.strategy.DebugStrategy;
 import n3phele.factory.strategy.ZombieStrategy;
 import n3phele.service.core.NotFoundException;
-import n3phele.service.core.Resource;
-import n3phele.service.model.core.AbstractManager;
 import n3phele.service.model.core.BaseEntity;
 import n3phele.service.model.core.Collection;
 import n3phele.service.model.core.CreateVirtualServerResponse;
 import n3phele.service.model.core.ExecutionFactoryCreateRequest;
-import n3phele.service.model.core.GenericModelDao;
 import n3phele.service.model.core.NameValue;
 import n3phele.service.model.core.VirtualServer;
 import n3phele.service.model.core.VirtualServerStatus;
