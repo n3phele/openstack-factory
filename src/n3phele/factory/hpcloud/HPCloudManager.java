@@ -37,6 +37,8 @@ public class HPCloudManager {
 	
 	private ComputeService mCompute;
 	private NovaApi mNovaApi;
+	
+	private ServerOptionsFactory serverOptionsFactory;
 
 	/**
 	 * @param creds
@@ -49,12 +51,15 @@ public class HPCloudManager {
 		
 		mCompute = jCloudCompute.getCompute();
 		mNovaApi = jCloudCompute.getNovaApi();
+		
+		serverOptionsFactory = new ServerOptionsFactory();
 	}
 	
 	public HPCloudManager(HPCloudCredentials creds, ComputeService compute, NovaApi novaApi)
 	{
 		this.mCompute = compute;
 		this.mNovaApi = novaApi;
+		serverOptionsFactory = new ServerOptionsFactory();
 	}
 	
 	/**
@@ -191,7 +196,7 @@ public class HPCloudManager {
 		 */
 		ServerApi serverApi = getServerApi(r);
 		
-		CreateServerOptions options = buildCreateServerOptions(r);
+		CreateServerOptions options = serverOptionsFactory.buildCreateServerOptions(this,r);
 		
 		/**
 		 * Append n3phele prefix
@@ -225,35 +230,6 @@ public class HPCloudManager {
 		return mNovaApi.getServerApiForZone(r.locationId);
 	}
 
-	protected CreateServerOptions buildCreateServerOptions(
-			HPCloudCreateServerRequest r) {
-		/**
-		 * Create our security group with following ports opened: TCP: 22, 8887
-		 * UDP: None ICMP: Yes
-		 */
-		SecurityGroup secGroup = createSecurityGroup(r.security_groups, r.locationId);
-		
-		/**
-		 * Create our keypair. Return existent keypair if already exists.
-		 */
-		KeyPair keyPair = createKeyPair(r.keyName, r.locationId);
-		
-		/**
-		 * Build our server creation options.
-		 */
-		CreateServerOptions options = new CreateServerOptions();
-		options.securityGroupNames(secGroup.getName());
-		options.keyPairName(keyPair.getName());
-		
-		/**
-		 * Custom commands
-		 */
-		if(r.user_data!= null){
-			if( r.user_data.length() > 0 )
-				options.userData(r.user_data.getBytes());
-		}
-		return options;
-	}
 	
 	/**
 	 * Check is a security group exists
