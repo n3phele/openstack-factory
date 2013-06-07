@@ -1,26 +1,17 @@
 package n3phele.factory.test.integration;
 
-import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.FileNotFoundException;
 import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-
-import javax.ws.rs.core.UriBuilder;
 
 import n3phele.factory.hpcloud.HPCloudCredentials;
 import n3phele.factory.hpcloud.HPCloudManager;
 import n3phele.security.EncryptedCredentials;
-import n3phele.security.EncryptedHPCredentials;
-import n3phele.service.model.core.ExecutionFactoryCreateRequest;
-import n3phele.service.model.core.NameValue;
-import static org.mockito.Mockito.*;
 
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -28,11 +19,6 @@ import org.junit.Test;
 import com.google.appengine.tools.development.testing.LocalDatastoreServiceTestConfig;
 import com.google.appengine.tools.development.testing.LocalServiceTestHelper;
 import com.google.appengine.tools.development.testing.LocalTaskQueueTestConfig;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.api.client.filter.HTTPBasicAuthFilter;
-import com.sun.jersey.api.representation.Form;
 
 public class HpCloudManagerTest {
 

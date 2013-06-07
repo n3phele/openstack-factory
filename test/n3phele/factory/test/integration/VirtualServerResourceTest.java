@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import javax.ws.rs.core.UriBuilder;
 
 import n3phele.security.EncryptedHPCredentials;
+import n3phele.service.model.core.ExecutionFactoryAssimilateRequest;
 import n3phele.service.model.core.ExecutionFactoryCreateRequest;
 import n3phele.service.model.core.NameValue;
 
@@ -118,6 +119,28 @@ public class VirtualServerResourceTest {
 		parameters.add(new NameValue("locationId", "az-1.region-a.geo-1"));
 		parameters.add(new NameValue("user_data", ""));
 		request.parameters = parameters;
+
+		ClientResponse result = resource.post(ClientResponse.class, request);
+		assertEquals(201, result.getStatus());
+	}
+	
+	@Test
+	public void testAssimilateVM() throws UnsupportedEncodingException, NoSuchAlgorithmException, URISyntaxException {
+		WebResource resource =  webResource.path("/");
+
+		String accessId = EncryptedHPCredentials.encryptX(testResource.get("testAccessId", ""), "password");
+		String secret = EncryptedHPCredentials.encryptX(testResource.get("testAccessKey", ""), "password");
+		
+		ExecutionFactoryAssimilateRequest request = new ExecutionFactoryAssimilateRequest();
+		
+		request.accessKey 			= accessId;
+		request.encryptedSecret 	= secret;
+		request.location 			= new URI("https://az-1.region-a.geo-1.compute.hpcloudsvc.com/v1.1/12365734013392");
+		request.description 		= "description";
+		request.name 				= "testing";
+		request.owner 				= new URI("http://localhost/");
+		request.locationId			= "az-1.region-a.geo-1";
+		request.ipaddress			= "";
 
 		ClientResponse result = resource.post(ClientResponse.class, request);
 		assertEquals(201, result.getStatus());

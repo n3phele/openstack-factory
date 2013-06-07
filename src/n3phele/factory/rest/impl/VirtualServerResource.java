@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import javax.annotation.security.RolesAllowed;
 import javax.mail.Message;
@@ -54,6 +55,7 @@ import n3phele.factory.strategy.ZombieStrategy;
 import n3phele.service.core.NotFoundException;
 import n3phele.service.core.Resource;
 import n3phele.service.model.core.AbstractManager;
+import n3phele.service.model.core.ExecutionFactoryAssimilateRequest;
 import n3phele.service.model.core.VirtualServerStatus;
 import n3phele.service.model.core.BaseEntity;
 import n3phele.service.model.core.Collection;
@@ -65,6 +67,8 @@ import n3phele.service.model.core.ParameterType;
 import n3phele.service.model.core.TypedParameter;
 import n3phele.service.model.core.VirtualServer;
 
+import org.jclouds.compute.domain.ComputeMetadata;
+import org.jclouds.compute.domain.internal.NodeMetadataImpl;
 import org.jclouds.openstack.nova.v2_0.domain.KeyPair;
 import org.jclouds.openstack.nova.v2_0.domain.SecurityGroup;
 import org.jclouds.openstack.nova.v2_0.domain.Server;
@@ -229,7 +233,55 @@ public class VirtualServerResource {
 		virtualMachinesRefs = getMachineUris(virtualServerList);
 		return Response.created(virtualServerList.get(0).getUri()).entity(new CreateVirtualServerResponse(virtualMachinesRefs)).build();
 	}
-
+	
+	
+	@POST
+	@Produces("application/json")
+	@RolesAllowed("authenticated")
+	@Path("virtualServer/assimilate")
+	public Response assimilate(ExecutionFactoryAssimilateRequest request)
+	{
+		HPCloudManager hpCloudManager = getNewHPCloudManager(request.accessKey, request.encryptedSecret);
+		
+		NodeMetadataImpl serverImpl = hpCloudManager.getServerByIP(request.locationId, request.ipaddress);
+		if(serverImpl == null)
+			return Response.status(Response.Status.NOT_FOUND).build();
+		
+		String instanceId 	= serverImpl.getId();
+		String zone			= instanceId.substring(0, instanceId.indexOf("/"));
+		instanceId 			= instanceId.substring(instanceId.indexOf("/")+1);
+		
+		List<VirtualServer> list = getByInstanceId(instanceId);
+		if(list.size() > 0)
+			return Response.status(Response.Status.CONFLICT).build();
+		
+		/*
+		 * TODO: We're using a second request because NodeMetadataImpl doesn't return the creation date.
+		 * We need to refactory this.
+		 */
+		Server server = hpCloudManager.getServerById(zone, instanceId);
+		if(server == null)
+			return Response.status(Response.Status.NOT_FOUND).build();
+		
+		Map<String, String> tags = server.getMetadata();
+		ArrayList<NameValue> params = new ArrayList<NameValue>(tags.size());
+		
+		for(Map.Entry<String, String> entry : tags.entrySet())
+		{
+			NameValue param = new NameValue();
+			param.setKey(entry.getKey());
+			param.setValue(entry.getValue());
+		}
+		
+		VirtualServer virtualServer = new VirtualServer(server.getName(), request.description, request.location, params, request.notification, request.accessKey, request.encryptedSecret, request.owner, request.idempotencyKey);
+		virtualServer.setCreated(server.getCreated());
+		virtualServer.setInstanceId(instanceId);
+		add(virtualServer);
+		
+		List<URI> virtualMachinesRefs = new ArrayList<URI>(1);
+		virtualMachinesRefs.add(virtualServer.getUri());
+		return Response.created(virtualServer.getUri()).entity(new CreateVirtualServerResponse(virtualMachinesRefs)).build();
+	}
 
 	protected void updateVMSiblings(ArrayList<String> siblings,
 			ArrayList<VirtualServer> virtualServerList) {
@@ -1231,6 +1283,14 @@ public class VirtualServerResource {
 		});
 		
 		return result;
+	}
+	
+	public List<VirtualServer> getByInstanceId(String instanceId)
+	{
+		logger.info("Getting vs list by instanceId...");
+		List<VirtualServer> list = new ArrayList<VirtualServer>(VirtualServerResource.dao.itemDaoFactory().collectionByProperty("instanceId", instanceId));
+		
+		return list;
 	}
 	
 	public List<VirtualServer> getZombie() { 

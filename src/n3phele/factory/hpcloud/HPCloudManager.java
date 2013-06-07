@@ -9,6 +9,7 @@ import java.util.Set;
 import org.jclouds.compute.ComputeService;
 import org.jclouds.compute.domain.ComputeMetadata;
 import org.jclouds.compute.domain.Hardware;
+import org.jclouds.compute.domain.internal.NodeMetadataImpl;
 import org.jclouds.domain.Location;
 import org.jclouds.openstack.nova.v2_0.NovaApi;
 import org.jclouds.openstack.nova.v2_0.domain.Image;
@@ -120,6 +121,36 @@ public class HPCloudManager {
 		serverApi.reboot(nodeId, rebootType);
 	}
 	
+	public NodeMetadataImpl getServerByIP(String zone, String ip)
+	{
+		/**
+		 * TODO: It's better to use function below, but I didn't find a way to use it.
+		 */
+		//ServerApi serverApi = mNovaApi.getServerApiForZone(zone);
+		//PagedIterable<? extends Server> servers = serverApi.listInDetail();
+		
+		Set<? extends ComputeMetadata> nodes = listNodes();
+		for(ComputeMetadata node : nodes)
+		{
+			NodeMetadataImpl nodeImpl = (NodeMetadataImpl)node;
+			Set<String> addrList = nodeImpl.getPublicAddresses();
+			for(String addr : addrList)
+			{
+				if(addr.equalsIgnoreCase(ip))
+					return nodeImpl;
+			}
+			
+			addrList = nodeImpl.getPrivateAddresses();
+			for(String addr : addrList)
+			{
+				if(addr.equalsIgnoreCase(ip))
+					return nodeImpl;
+			}
+		}
+		
+		return null;
+	}
+	
 	/**
 	 * @param zone
 	 * @param nodeId our node identification.
@@ -218,6 +249,9 @@ public class HPCloudManager {
 			 */
 			if( r.nodeCount > 1 )
 				name = name.concat("-" + String.valueOf(i));
+			
+			long unixtime = (System.currentTimeMillis() / 1000L);
+			name = name.concat("-" + String.valueOf(unixtime));
 			
 			ServerCreated server = serverApi.create(name, r.imageRef, r.flavorRef, options);
 			serversList.add(server);
