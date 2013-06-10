@@ -605,17 +605,17 @@ public class VirtualServerResource {
 	protected VirtualServer deepGet(Long id) throws NotFoundException
 	{
 		VirtualServer virtualServer = load(id);
+		HPCloudManager hpCloudManager = getNewHPCloudManager(virtualServer.getAccessKey(), virtualServer.getEncryptedKey());
 		logger.info("Virtual Server retrieved: "+virtualServer.getInstanceId());
-		updateVirtualServer(virtualServer);
+		updateVirtualServer(virtualServer, hpCloudManager);
 		return virtualServer;
 	}
 	
 	/** Updates virtual server object and data store state
 	 * @param virtualServer object to update
 	 */
-	protected void updateVirtualServer(VirtualServer virtualServer) throws IllegalArgumentException
-	{		
-		HPCloudManager hpCloudManager = getNewHPCloudManager(virtualServer.getAccessKey(), virtualServer.getEncryptedKey());
+	protected void updateVirtualServer(VirtualServer virtualServer, HPCloudManager hpCloudManager) throws IllegalArgumentException
+	{
 		String instanceId = virtualServer.getInstanceId();
 		boolean madeIntoZombie = virtualServer.isZombie();
 
@@ -802,12 +802,27 @@ public class VirtualServerResource {
 	{
 		Collection<VirtualServer> servers	= getCollection();
 		Collection<BaseEntity> result 		= servers.collection(true);
+		HPCloudManager hpCloudManager 		= null;
+		String accessKey					= null;
+		String encryptedKey					= null;
+		
 		try {
 			for (VirtualServer virtualServer : servers.getElements()) {
 	
 					try {
 						if(virtualServer.getUri() != null && !checkForZombieAndDebugExpiry(virtualServer))
-							updateVirtualServer(virtualServer);
+						{
+							String accessKey2		= virtualServer.getAccessKey();
+							String encryptedKey2	= virtualServer.getEncryptedKey();
+							if(hpCloudManager == null || !accessKey.equalsIgnoreCase(accessKey2)  || !encryptedKey.equalsIgnoreCase(encryptedKey2))
+							{
+								logger.info("-------refreshCollection-- creating a new HPCloudManager");
+								hpCloudManager 	= getNewHPCloudManager(virtualServer.getAccessKey(), virtualServer.getEncryptedKey());
+								accessKey 		= accessKey2;
+								encryptedKey 	= encryptedKey2;
+							}
+							updateVirtualServer(virtualServer, hpCloudManager);
+						}
 					}
 					catch (Exception e) {
 						logger.warn( " refresh failed. Killing..",e);
@@ -874,7 +889,10 @@ public class VirtualServerResource {
 	public boolean createWithZombie(VirtualServer virtualServer)
 	{
 		logger.info("Entered createWithZombie");
-		List<VirtualServer> zombies = getZombie();
+		List<VirtualServer> zombies 	= getZombie();
+		HPCloudManager hpCloudManager 	= null;
+		String accessKey				= null;
+		String encryptedKey				= null;
 		if (zombies != null)
 		{
 			logger.info("Got " + zombies.size() + " Zombies ");
@@ -942,7 +960,17 @@ public class VirtualServerResource {
 						
 						virtualServer.setInstanceId(zombieVirtualServer.getInstanceId());
 						virtualServer.setCreated(zombieVirtualServer.getCreated());
-						updateVirtualServer(virtualServer);
+						
+						String accessKey2		= virtualServer.getAccessKey();
+						String encryptedKey2	= virtualServer.getEncryptedKey();
+						if(hpCloudManager == null || !accessKey.equalsIgnoreCase(accessKey2)  || !encryptedKey.equalsIgnoreCase(encryptedKey2))
+						{
+							hpCloudManager 	= getNewHPCloudManager(virtualServer.getAccessKey(), virtualServer.getEncryptedKey());
+							accessKey 		= accessKey2;
+							encryptedKey 	= encryptedKey2;
+						}
+						
+						updateVirtualServer(virtualServer, hpCloudManager);
 						
 						if( virtualServer.getStatus().equals(VirtualServerStatus.running) )
 							return true;

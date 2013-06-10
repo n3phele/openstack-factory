@@ -218,7 +218,7 @@ public class VirtualServerResourceTest
 		VirtualServerResource resource = new VirtualServerResource() {
 			// Do nothing when trying to update reference throw remote call
 			@Override
-			protected void updateVirtualServer(VirtualServer item)
+			protected void updateVirtualServer(VirtualServer item, HPCloudManager hpCloudManager)
 					throws IllegalArgumentException
 			{
 
@@ -249,7 +249,7 @@ public class VirtualServerResourceTest
 		VirtualServerResource resource = new VirtualServerResource() {
 			// Do nothing when trying to update reference throw remote call
 			@Override
-			protected void updateVirtualServer(VirtualServer item)
+			protected void updateVirtualServer(VirtualServer item, HPCloudManager hpCloudManager)
 					throws IllegalArgumentException
 			{
 
@@ -284,7 +284,7 @@ public class VirtualServerResourceTest
 		VirtualServerResource resource = new VirtualServerResource() {
 			// Do nothing when trying to update reference throw remote call
 			@Override
-			protected void updateVirtualServer(VirtualServer item)
+			protected void updateVirtualServer(VirtualServer item, HPCloudManager hpCloudManager)
 					throws IllegalArgumentException
 			{
 
