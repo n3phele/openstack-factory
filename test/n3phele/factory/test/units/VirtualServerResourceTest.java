@@ -205,7 +205,6 @@ public class VirtualServerResourceTest
 	@Test
 	public void virtualServerGetTest()
 	{
-
 		VirtualServerTestDAO manager = new VirtualServerTestDAO();
 
 		// Add a virtual server object to database
@@ -320,9 +319,17 @@ public class VirtualServerResourceTest
 		list.add(vs1);
 		manager.add(vs1);
 
-		VirtualServerResource virtualServerResource = PowerMockito.spy(new VirtualServerResource());
+		final HPCloudManager cloudManager = Mockito.mock(HPCloudManager.class);
+		VirtualServerResource virtualServerResource = PowerMockito.spy(new VirtualServerResource()
+		{
+			protected HPCloudManager getNewHPCloudManager(String acessKey, String encryptedKey)
+			{
+				return cloudManager;				
+			}
+		});
+
 		PowerMockito.doNothing().when(virtualServerResource, "refreshVirtualServer", Mockito.any());
-		PowerMockito.doNothing().when(virtualServerResource, "updateVirtualServer", Mockito.any());
+		PowerMockito.doNothing().when(virtualServerResource, "updateVirtualServer", Mockito.any(), Mockito.any());
 		PowerMockito.when(virtualServerResource, "getZombie").thenReturn(list);
 
 		assertEquals(true, Whitebox.invokeMethod(virtualServerResource, "createWithZombie", vs2));
