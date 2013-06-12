@@ -10,6 +10,8 @@
  *  specific language governing permissions and limitations under the License.
  */
 package n3phele.factory.rest.impl;
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.security.InvalidParameterException;
@@ -78,6 +80,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.apphosting.api.DeadlineExceededException;
 import com.googlecode.objectify.Key;
+import com.googlecode.objectify.ObjectifyService;
 import com.googlecode.objectify.Work;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
@@ -797,10 +800,18 @@ public class VirtualServerResource {
 		HPCloudManager hpCloudManager = new HPCloudManager(getNewHPCredentials(acessKey, encryptedKey));
 		return hpCloudManager;
 	}
+	
+	private Collection<VirtualServer> getNonTerminatedServers()
+	{
+		return manager.getNotTerminatedMachines();	
+	}
 
 	private Collection<BaseEntity> refreshCollection()
 	{
-		Collection<VirtualServer> servers	= getCollection();
+		Collection<VirtualServer> servers	= getNonTerminatedServers();
+		logger.info("Refreshing collection of non terminated virtual servers. Current size: " + servers.getElements().size());
+		
+		
 		Collection<BaseEntity> result 		= servers.collection(true);
 		HPCloudManager hpCloudManager 		= null;
 		String accessKey					= null;
@@ -1203,7 +1214,7 @@ public class VirtualServerResource {
 		}
 	}
 
-	private static class VirtualServerManager extends AbstractManager<VirtualServer> {
+	public static class VirtualServerManager extends AbstractManager<VirtualServer> {
 
 		@Override
 		protected URI myPath()
@@ -1234,6 +1245,18 @@ public class VirtualServerResource {
 		
 		public void delete(VirtualServer vs){
 			super.delete(vs);
+		}
+		
+		public Collection<VirtualServer> getNotTerminatedMachines()
+		{			
+			java.util.Collection<VirtualServer> serversRunning = super.itemDao.collectionByProperty("status", VirtualServerStatus.running);
+			java.util.Collection<VirtualServer> serversInitializing = super.itemDao.collectionByProperty("status", VirtualServerStatus.initializing);
+			
+			ArrayList<VirtualServer> servers = new ArrayList<VirtualServer>();
+			servers.addAll(serversRunning);
+			servers.addAll(serversInitializing);
+			
+			return new Collection<VirtualServer>(super.itemDao.clazz.getSimpleName(), this.path, servers);
 		}
 		
 		public Collection<VirtualServer> getCollection(){
