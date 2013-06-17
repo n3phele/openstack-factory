@@ -29,6 +29,7 @@ public class JCloudComputeFactory implements CloudFactory {
 	 *            A key associated with AccessKey provided in identity
 	 *            parameter.
 	 */
+	@SuppressWarnings("rawtypes")
 	public void initComputeService(String identity, String secretKey)
 	{
 		Properties properties = new Properties();

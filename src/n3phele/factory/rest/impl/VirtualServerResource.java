@@ -10,7 +10,6 @@
  *  specific language governing permissions and limitations under the License.
  */
 package n3phele.factory.rest.impl;
-import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -22,7 +21,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 
 import javax.annotation.security.RolesAllowed;
 import javax.mail.Message;
@@ -69,7 +67,6 @@ import n3phele.service.model.core.ParameterType;
 import n3phele.service.model.core.TypedParameter;
 import n3phele.service.model.core.VirtualServer;
 
-import org.jclouds.compute.domain.ComputeMetadata;
 import org.jclouds.compute.domain.internal.NodeMetadataImpl;
 import org.jclouds.openstack.nova.v2_0.domain.KeyPair;
 import org.jclouds.openstack.nova.v2_0.domain.SecurityGroup;
@@ -80,7 +77,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.apphosting.api.DeadlineExceededException;
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.ObjectifyService;
 import com.googlecode.objectify.Work;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
@@ -244,41 +240,61 @@ public class VirtualServerResource {
 	@Path("virtualServer/assimilate")
 	public Response assimilate(ExecutionFactoryAssimilateRequest request)
 	{
+		logger.info("Assimilating VM");
 		HPCloudManager hpCloudManager = getNewHPCloudManager(request.accessKey, request.encryptedSecret);
 		
+		logger.info("IP Adress: "+request.ipaddress);
 		NodeMetadataImpl serverImpl = hpCloudManager.getServerByIP(request.locationId, request.ipaddress);
-		if(serverImpl == null)
-			return Response.status(Response.Status.NOT_FOUND).build();
 		
+		if(serverImpl == null){
+			logger.warn("IP Adress not found on cloud");
+			return Response.status(Response.Status.NOT_FOUND).build();
+		}
+				
 		String instanceId 	= serverImpl.getId();
 		String zone			= instanceId.substring(0, instanceId.indexOf("/"));
 		instanceId 			= instanceId.substring(instanceId.indexOf("/")+1);
+		logger.info("Server Instance ID: "+instanceId);
+	
 		
 		List<VirtualServer> list = getByInstanceId(instanceId);
-		if(list.size() > 0)
+		if(list.size() > 0){
+			logger.warn("VM already exists on factory");
 			return Response.status(Response.Status.CONFLICT).build();
-		
+		}
+		logger.info("Retrieved list");
 		/*
 		 * TODO: We're using a second request because NodeMetadataImpl doesn't return the creation date.
 		 * We need to refactory this.
 		 */
 		Server server = hpCloudManager.getServerById(zone, instanceId);
-		if(server == null)
+		if(server == null){
+			logger.warn("Error retrieving VM from cloud");
 			return Response.status(Response.Status.NOT_FOUND).build();
-		
-		Map<String, String> tags = server.getMetadata();
-		ArrayList<NameValue> params = new ArrayList<NameValue>(tags.size());
-		
-		for(Map.Entry<String, String> entry : tags.entrySet())
-		{
-			NameValue param = new NameValue();
-			param.setKey(entry.getKey());
-			param.setValue(entry.getValue());
 		}
+		
+		
+		ArrayList<NameValue> params = new ArrayList<NameValue>();
+		
+		NameValue param = new NameValue();
+		param.setKey("locationId");
+		param.setValue(request.locationId);		
+		params.add(param);
+		
+		param = new NameValue();		
+		param.setKey("flavorRef");
+		param.setValue(server.getFlavor().getId());
+		params.add(param);
+		
 		
 		VirtualServer virtualServer = new VirtualServer(server.getName(), request.description, request.location, params, request.notification, request.accessKey, request.encryptedSecret, request.owner, request.idempotencyKey);
 		virtualServer.setCreated(server.getCreated());
 		virtualServer.setInstanceId(instanceId);
+		
+		for(NameValue nm: virtualServer.getParameters()){
+			logger.info("Key: "+nm.getKey()+", Value: "+nm.getValue());
+		}
+	
 		add(virtualServer);
 		
 		List<URI> virtualMachinesRefs = new ArrayList<URI>(1);
