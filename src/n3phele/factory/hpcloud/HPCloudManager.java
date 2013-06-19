@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import n3phele.factory.rest.impl.VirtualServerResource;
+
 import org.jclouds.compute.ComputeService;
 import org.jclouds.compute.domain.ComputeMetadata;
 import org.jclouds.compute.domain.Hardware;
@@ -26,6 +28,8 @@ import org.jclouds.openstack.nova.v2_0.features.ImageApi;
 import org.jclouds.openstack.nova.v2_0.features.ServerApi;
 import org.jclouds.openstack.nova.v2_0.options.CreateServerOptions;
 import org.jclouds.openstack.nova.v2_0.options.RebuildServerOptions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.FluentIterable;
 
@@ -35,6 +39,7 @@ import com.google.common.collect.FluentIterable;
  */
 public class HPCloudManager {
 	public static String	JCLOUD_PROVIDER	= "hpcloud-compute";
+	final Logger logger = LoggerFactory.getLogger(HPCloudManager.class);
 	
 	private ComputeService mCompute;
 	private NovaApi mNovaApi;
@@ -130,6 +135,7 @@ public class HPCloudManager {
 		//PagedIterable<? extends Server> servers = serverApi.listInDetail();
 		
 		Set<? extends ComputeMetadata> nodes = listNodes();
+		
 		for(ComputeMetadata node : nodes)
 		{
 			NodeMetadataImpl nodeImpl = (NodeMetadataImpl)node;
