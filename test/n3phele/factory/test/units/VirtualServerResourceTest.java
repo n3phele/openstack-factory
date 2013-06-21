@@ -262,7 +262,7 @@ public class VirtualServerResourceTest
 		};
 
 		// Send error as false
-		resource.kill(vs.getId(), false, false);
+		resource.kill(vs.getId(), false, false, false);
 
 		// If virtual server was deleted, this method throws an exception
 		VirtualServer virtualServer = manager.get(vs.getId());
@@ -297,7 +297,7 @@ public class VirtualServerResourceTest
 		};
 
 		// Send error as true
-		resource.kill(vs.getId(), false, true);
+		resource.kill(vs.getId(), false, true, false);
 
 		// If virtual server was deleted, this method throws an exception
 		VirtualServer virtualServer = manager.get(vs.getId());

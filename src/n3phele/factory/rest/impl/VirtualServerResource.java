@@ -461,33 +461,40 @@ public class VirtualServerResource {
 	@DELETE
 	@Path("virtualServer/{id}")
 	@RolesAllowed("authenticated")
-	public void kill(@PathParam("id") Long id, @DefaultValue("false") @QueryParam("debug") boolean debug, @DefaultValue("false") @QueryParam("error") boolean error) throws NotFoundException
+	public void kill(@PathParam("id") Long id, @DefaultValue("false") @QueryParam("debug") boolean debug, @DefaultValue("false") @QueryParam("error") boolean error, @DefaultValue("false") @QueryParam("dbonly") boolean dbonly) throws NotFoundException
 	{
 		logger.info("[REST] DELETE was been called with id" + id + " debug = " + debug + " error = " + error);
 		VirtualServer virtualServer = null;
 		try
 		{
-			virtualServer = deepGet(id);
-			if (error && !debug)
+			if(dbonly)
 			{
-				logger.info("[REST] terminating...");
-				terminate(virtualServer);
+				virtualServer = load(id);
+				if(virtualServer != null)
+					delete(virtualServer);
 			}
 			else
 			{
-				logger.info("[REST] Softkill...");
-				softKill(virtualServer, error);
+				virtualServer = deepGet(id);
+				
+				if (error && !debug)
+					softKill(virtualServer, error);
 			}
-		} catch (Exception e)
+		}
+		catch(Exception e)
 		{
-			try
+			if(!dbonly)
 			{
-				virtualServer = get(id);
-				terminate(virtualServer);
-			} catch (Exception ee)
-			{
-				if (virtualServer != null)
-					delete(virtualServer);
+				try
+				{
+					virtualServer = deepGet(id);
+					terminate(virtualServer);
+				}
+				catch(Exception ee)
+				{
+					if (virtualServer != null)
+						delete(virtualServer);
+				}
 			}
 		}
 	}
