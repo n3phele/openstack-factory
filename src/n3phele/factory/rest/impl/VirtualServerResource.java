@@ -480,6 +480,8 @@ public class VirtualServerResource {
 				virtualServer = deepGet(id);
 				
 				if (error && !debug)
+					terminate(virtualServer);
+				else
 					softKill(virtualServer, error);
 			}
 		}
