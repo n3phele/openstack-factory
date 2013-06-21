@@ -242,8 +242,10 @@ public class VirtualServerResource {
 	{
 		logger.info("Assimilating VM");
 		HPCloudManager hpCloudManager = getNewHPCloudManager(request.accessKey, request.encryptedSecret);
-		
+		request.ipaddress = request.ipaddress.trim();
 		logger.info("IP Adress: "+request.ipaddress);
+		logger.info("Location ID: "+request.locationId);		
+		
 		NodeMetadataImpl serverImpl = hpCloudManager.getServerByIP(request.locationId, request.ipaddress);
 		
 		if(serverImpl == null){
