@@ -73,7 +73,6 @@ import org.jclouds.openstack.nova.v2_0.domain.KeyPair;
 import org.jclouds.openstack.nova.v2_0.domain.SecurityGroup;
 import org.jclouds.openstack.nova.v2_0.domain.Server;
 import org.jclouds.openstack.nova.v2_0.domain.ServerCreated;
-import org.mortbay.log.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1243,7 +1242,7 @@ public class VirtualServerResource {
             	URI current = vs.getNotification();
         		if(current == null || current.toString().length()==0) {
         			vs.setNotification(notification);
-        			Log.info("Setting notification for "+vs.getUri()+" to "+notification);
+        			logger.info("Setting notification for "+vs.getUri()+" to "+notification);
         			VirtualServerResource.dao.update(vs);
         		}
         		return vs.getNotification();	
