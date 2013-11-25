@@ -467,11 +467,11 @@ public class VirtualServerResource {
 	@Produces({ "application/json" })
 	@Path("virtualServer/{id}")
 	@RolesAllowed("authenticated")
-	public URI get(@PathParam("id") Long id, URI notification) throws NotFoundException
+	public URI get(@PathParam("id") Long id, String notification) throws NotFoundException
 	{
 		logger.info("Update notification URI ("+notification+") for vm with id "+id);
 
-		URI result = updateNotificationURL(id, notification);
+		URI result = updateNotificationURL(id, URI.create(notification));
 		return result;
 	}
 
