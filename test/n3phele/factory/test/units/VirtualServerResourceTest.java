@@ -13,8 +13,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.Vector;
 
 import javax.ws.rs.core.Response;
@@ -41,10 +39,6 @@ import org.jclouds.domain.Location;
 import org.jclouds.domain.LoginCredentials;
 import org.jclouds.openstack.nova.v2_0.domain.Address;
 import org.jclouds.openstack.nova.v2_0.domain.Server;
-import org.jclouds.openstack.nova.v2_0.domain.Server.Status;
-import org.jclouds.openstack.nova.v2_0.domain.ServerExtendedAttributes;
-import org.jclouds.openstack.nova.v2_0.domain.ServerExtendedStatus;
-import org.jclouds.openstack.v2_0.domain.Link;
 import org.jclouds.openstack.v2_0.domain.Resource;
 import org.junit.After;
 import org.junit.Before;
@@ -217,10 +211,10 @@ public class VirtualServerResourceTest
 		VirtualServerResource resource = new VirtualServerResource() {
 			// Do nothing when trying to update reference throw remote call
 			@Override
-			protected void updateVirtualServer(VirtualServer item, HPCloudManager hpCloudManager)
+			protected boolean updateVirtualServer(VirtualServer item, HPCloudManager hpCloudManager)
 					throws IllegalArgumentException
 			{
-
+				return true;
 			}
 		};
 		VirtualServer virtualServer = resource.get(id);
@@ -248,10 +242,10 @@ public class VirtualServerResourceTest
 		VirtualServerResource resource = new VirtualServerResource() {
 			// Do nothing when trying to update reference throw remote call
 			@Override
-			protected void updateVirtualServer(VirtualServer item, HPCloudManager hpCloudManager)
+			protected boolean updateVirtualServer(VirtualServer item, HPCloudManager hpCloudManager)
 					throws IllegalArgumentException
 			{
-
+				return true;
 			}
 
 			@Override
@@ -283,10 +277,10 @@ public class VirtualServerResourceTest
 		VirtualServerResource resource = new VirtualServerResource() {
 			// Do nothing when trying to update reference throw remote call
 			@Override
-			protected void updateVirtualServer(VirtualServer item, HPCloudManager hpCloudManager)
+			protected boolean updateVirtualServer(VirtualServer item, HPCloudManager hpCloudManager)
 					throws IllegalArgumentException
 			{
-
+				return true;
 			}
 
 			@Override

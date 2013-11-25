@@ -55,17 +55,17 @@ import n3phele.factory.strategy.ZombieStrategy;
 import n3phele.service.core.NotFoundException;
 import n3phele.service.core.Resource;
 import n3phele.service.model.core.AbstractManager;
-import n3phele.service.model.core.ExecutionFactoryAssimilateRequest;
-import n3phele.service.model.core.VirtualServerStatus;
 import n3phele.service.model.core.BaseEntity;
 import n3phele.service.model.core.Collection;
 import n3phele.service.model.core.CreateVirtualServerResponse;
+import n3phele.service.model.core.ExecutionFactoryAssimilateRequest;
 import n3phele.service.model.core.ExecutionFactoryCreateRequest;
 import n3phele.service.model.core.GenericModelDao;
 import n3phele.service.model.core.NameValue;
 import n3phele.service.model.core.ParameterType;
 import n3phele.service.model.core.TypedParameter;
 import n3phele.service.model.core.VirtualServer;
+import n3phele.service.model.core.VirtualServerStatus;
 
 import org.jclouds.compute.domain.internal.NodeMetadataImpl;
 import org.jclouds.openstack.nova.v2_0.domain.KeyPair;
@@ -205,7 +205,7 @@ public class VirtualServerResource {
 	public Response create(ExecutionFactoryCreateRequest request) throws Exception, InvalidParameterException
 	{
 		HPCloudCreateServerRequest hpCloudRequest = fillWithRequest(request);
-		logger.info("Creating zombie");
+
 		/**
 		 * We're creating a temporary VirtualServer item to call createWithZombie method if we're creating just one machine.
 		 * If zombie is created with success, they'll just initialize the ArrayLists.
@@ -333,8 +333,8 @@ public class VirtualServerResource {
 			if(createdFromZombie)
 			{
 				logger.info("Only one zombie virtualServer");
-				virtualServerList 	= new ArrayList<VirtualServer>(1);					
-				virtualServerList.	add(tempVirtualServer);			
+				virtualServerList = new ArrayList<VirtualServer>(1);					
+				virtualServerList.add(tempVirtualServer);			
 			}
 		}
 		
@@ -643,30 +643,22 @@ public class VirtualServerResource {
 	
 	/** Updates virtual server object and data store state
 	 * @param virtualServer object to update
+	 * @returns false if the virtual server no longer exists
 	 */
-	protected void updateVirtualServer(VirtualServer virtualServer, HPCloudManager hpCloudManager) throws IllegalArgumentException
+	protected boolean updateVirtualServer(VirtualServer virtualServer, HPCloudManager hpCloudManager) throws IllegalArgumentException
 	{
 		String instanceId = virtualServer.getInstanceId();
 		boolean madeIntoZombie = virtualServer.isZombie();
 
-		if (madeIntoZombie)
-		{
-			if (updateStatus(virtualServer, VirtualServerStatus.terminated))
-				update(virtualServer);
-			
-			if (virtualServer.getStatus().equals("terminated"))
-			{
-				logger.info("Instance " + virtualServer.getName() + " terminated .. purging");
-				delete(virtualServer);
-				return;
-			}
-		} else if (instanceId != null && instanceId.length() > 0)
-		{
-			String locationId = getLocationId(virtualServer);
-			
+		if (madeIntoZombie) {
+			updateStatus(virtualServer, VirtualServerStatus.terminated);
+			logger.info("Instance " + virtualServer.getName() + " terminated .. purging");
+			delete(virtualServer);
+			return false;
+		} else if (instanceId != null && instanceId.length() > 0) {
+			String locationId = getLocationId(virtualServer);	
 			Server s = hpCloudManager.getServerById(locationId, virtualServer.getInstanceId());
-			if (s != null)
-			{
+			if (s != null) {
 				VirtualServerStatus currentStatus = mapStatus(s);	
 				
 				/**
@@ -681,48 +673,53 @@ public class VirtualServerResource {
 					tags.put("n3phele-uri", virtualServer.getUri().toString());
 					hpCloudManager.putServerTags(virtualServer.getInstanceId(), locationId, tags);
 					virtualServer.setOutputParameters(HPCloudExtractor.extract(s));		
-				}
 				
-				String publicIP = "";
-				String privateIP = "";
-				ArrayList<NameValue> params = virtualServer.getOutputParameters();
-				if( params != null )
-				{
-					for(NameValue p : params)
+					String publicIP = "";
+					String privateIP = "";
+					ArrayList<NameValue> params = virtualServer.getOutputParameters();
+					if( params != null )
 					{
-						if(p.getKey().equalsIgnoreCase("publicIpAddress" ))
+						for(NameValue p : params)
 						{
-							publicIP = p.getValue();
-							logger.info("Name: "+p.getKey()+" ,Value: "+p.getValue());
-						}
-						if(p.getKey().equalsIgnoreCase("privateIpAddress" ))
-						{
-							privateIP = p.getValue();
-							logger.info("Name: "+p.getKey()+" ,Value: "+p.getValue());
+							if(p.getKey().equalsIgnoreCase("publicIpAddress" ))
+							{
+								publicIP = p.getValue();
+								logger.info("Name: "+p.getKey()+" ,Value: "+p.getValue());
+							}
+							if(p.getKey().equalsIgnoreCase("privateIpAddress" ))
+							{
+								privateIP = p.getValue();
+								logger.info("Name: "+p.getKey()+" ,Value: "+p.getValue());
+							}
 						}
 					}
-				}
-								
-				if(!(publicIP.equalsIgnoreCase(privateIP)))
-				{
-					logger.info("IP public is set, updating vs");
-					if (updateStatus(virtualServer, currentStatus))
+					
+					// When the public and private IP addresses are both returned we are
+					// asserting that the VM is ready for service, so set the state to "running"
+					// Assert currentStatus is VirtualServerStatus.running
+									
+					if(!(publicIP.equalsIgnoreCase(privateIP)))
+					{
+						logger.info("IP public is set, updating vs");
+						updateStatus(virtualServer, currentStatus);
 						update(virtualServer);
+					}
 				}
 
 				if (virtualServer.getStatus().equals(VirtualServerStatus.terminated))
 				{
 					logger.info("Instance " + virtualServer.getInstanceId() + " terminated .. purging");
 					delete(virtualServer);
-					return;
+					return false;
 				}
 			} else
 			{
 				logger.info("Instance " + virtualServer.getInstanceId() + " not found, assumed terminated .. purging");
 				delete(virtualServer);
-				return;
+				return false;
 			}
 		}
+		return true;
 	}
 	
 	private VirtualServerStatus mapStatus(Server server)
@@ -924,9 +921,14 @@ public class VirtualServerResource {
 
 	}
 	
+	/** Attempt to create a virtual server using a zombie 
+	 * @param virtualServer
+	 * @return true if created with zombie
+	 */
 	public boolean createWithZombie(VirtualServer virtualServer)
 	{
 		logger.info("Entered createWithZombie");
+	
 		List<VirtualServer> zombies 	= getZombie();
 		HPCloudManager hpCloudManager 	= null;
 		String accessKey				= null;
@@ -954,32 +956,14 @@ public class VirtualServerResource {
 						}
 					}
 					
-					final Long zombieId = zombieVirtualServer.getId();
-					boolean claimed = VirtualServerResource.dao.transact(new Work<Boolean>()
-					{
-							@Override
-							public Boolean run()
-							{
-								try{
-									VirtualServer zombie = VirtualServerResource.dao.get(zombieId);
-									zombie.setIdempotencyKey(new Date().toString());
-									VirtualServerResource.dao.add(zombie);
-									VirtualServerResource.dao.delete(zombie);
-								}
-								catch(Exception e){
-									return false;
-								}
-								return true;
-							}
-					 });
-					
+					boolean claimed = claimZombie(zombieVirtualServer.getId());
 					if (claimed)
 					{
-						List<VirtualServer> leftOverZombies = getZombie();
-						if (leftOverZombies != null)
-							logger.info("Got " + leftOverZombies.size() + " zombies remaining");
-						else
-							logger.info("Got 0 Zombies remaining");
+//						List<VirtualServer> leftOverZombies = getZombie();
+//						if (leftOverZombies != null)
+//							logger.info("Got " + leftOverZombies.size() + " zombies remaining");
+//						else
+//							logger.info("Got 0 Zombies remaining");
 						
 						logger.info("Claimed " + zombieVirtualServer.getInstanceId());
 						refreshVirtualServer(zombieVirtualServer);
@@ -990,14 +974,14 @@ public class VirtualServerResource {
 							continue;
 						}
 						
+						virtualServer.setInstanceId(zombieVirtualServer.getInstanceId());
+						virtualServer.setCreated(zombieVirtualServer.getCreated());
+						
 						//The instance object does not exist yet, add it
 						if(virtualServer.getId() == null)
 						{
 							add(virtualServer);
 						}						
-						
-						virtualServer.setInstanceId(zombieVirtualServer.getInstanceId());
-						virtualServer.setCreated(zombieVirtualServer.getCreated());
 						
 						String accessKey2		= virtualServer.getAccessKey();
 						String encryptedKey2	= virtualServer.getEncryptedKey();
@@ -1008,22 +992,34 @@ public class VirtualServerResource {
 							encryptedKey 	= encryptedKey2;
 						}
 						
-						updateVirtualServer(virtualServer, hpCloudManager);
-						
-						if( virtualServer.getStatus().equals(VirtualServerStatus.running) )
-							return true;
-						else
-							continue; // There's no difference calling continue here, i think.
-						
-					} else
-					{
-						logger.warn("Zombie contention on " + zombieVirtualServer.getInstanceId());
-					}
+						if(updateVirtualServer(virtualServer, hpCloudManager))
+							return true;  // zombie created 
+					} 
 				}
 			}
 		}
 		
 		return false;
+	}
+	
+	private boolean claimZombie(final long zombieId) {
+		boolean claimed = false;
+		try {
+		claimed = VirtualServerResource.dao.transact(new Work<Boolean>() {
+					@Override
+					public Boolean run() {
+						VirtualServer zombie = VirtualServerResource.dao.get(zombieId);
+						zombie.setIdempotencyKey(new Date().toString());
+						VirtualServerResource.dao.update(zombie);
+						VirtualServerResource.dao.delete(zombie);
+						return true;
+					}
+			 });
+		} catch (NotFoundException e) {
+			logger.warn("Zombie contention on " + zombieId);
+			claimed = false;
+		}
+		return claimed;
 	}
 	
 	private boolean safeEquals(String a, String b)
@@ -1051,14 +1047,6 @@ public class VirtualServerResource {
 		} catch (Exception e)
 		{
 			logger.info("SendNotification exception to <" + virtualServer.getNotification() + "> from " + virtualServer.getUri() + " old: " + oldStatus + " new: " + virtualServer.getStatus(), e);
-			if (oldStatus.equals(newStatus))
-			{
-				logger.warn("Cancelling SendNotification to <" + virtualServer.getNotification() + "> from " + virtualServer.getUri() + " old: " + oldStatus + " new: " + virtualServer.getStatus());
-			}
-			else
-			{
-				virtualServer.setStatus(newStatus);
-			}
 		}
 		return true;
 	}
