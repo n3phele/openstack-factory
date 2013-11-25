@@ -323,7 +323,7 @@ public class VirtualServerResourceTest
 		});
 
 		PowerMockito.doNothing().when(virtualServerResource, "refreshVirtualServer", Mockito.any());
-		PowerMockito.doNothing().when(virtualServerResource, "updateVirtualServer", Mockito.any(), Mockito.any());
+		PowerMockito.doReturn(true).when(virtualServerResource, "updateVirtualServer", Mockito.any(), Mockito.any());
 		PowerMockito.when(virtualServerResource, "getZombie").thenReturn(list);
 
 		assertEquals(true, Whitebox.invokeMethod(virtualServerResource, "createWithZombie", vs2));
