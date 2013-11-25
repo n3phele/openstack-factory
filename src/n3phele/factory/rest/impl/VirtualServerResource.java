@@ -35,6 +35,7 @@ import javax.ws.rs.DefaultValue;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -72,6 +73,7 @@ import org.jclouds.openstack.nova.v2_0.domain.KeyPair;
 import org.jclouds.openstack.nova.v2_0.domain.SecurityGroup;
 import org.jclouds.openstack.nova.v2_0.domain.Server;
 import org.jclouds.openstack.nova.v2_0.domain.ServerCreated;
+import org.mortbay.log.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -454,6 +456,23 @@ public class VirtualServerResource {
 		VirtualServer item = deepGet(id);
 
 		return item;
+	}
+	
+	/** Update the notification URL of a virtual machine if not already set
+	 * @param id the virtual server Id.
+	 * @return new notification URI
+	 * @throws NotFoundException
+	 */
+	@PUT
+	@Produces({ "application/json" })
+	@Path("virtualServer/{id}")
+	@RolesAllowed("authenticated")
+	public URI get(@PathParam("id") Long id, URI notification) throws NotFoundException
+	{
+		logger.info("Update notification URI ("+notification+") for vm with id "+id);
+
+		URI result = updateNotificationURL(id, notification);
+		return result;
 	}
 
 	/** Kill the nominated virtual server
@@ -1214,7 +1233,24 @@ public class VirtualServerResource {
 		sendSecurityGroupNotificationEmail(sg.getName(), to, firstName, lastName, location);
 
 		return true;
-	}	
+	}
+	
+	protected URI updateNotificationURL(final Long id, final URI notification) {
+		final URI result = VirtualServerResource.dao.transact(new Work<URI>() {
+            @Override
+            public URI run() {
+            	VirtualServer vs = VirtualServerResource.dao.get(id);
+            	URI current = vs.getNotification();
+        		if(current == null || current.toString().length()==0) {
+        			vs.setNotification(notification);
+        			Log.info("Setting notification for "+vs.getUri()+" to "+notification);
+        			VirtualServerResource.dao.update(vs);
+        		}
+        		return vs.getNotification();	
+            }
+		 });
+		return result;
+	}
 	
 	protected HPCloudCredentials getNewHPCredentials(String identity, String secretKey)
 	{
