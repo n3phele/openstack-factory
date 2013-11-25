@@ -1073,11 +1073,9 @@ public class VirtualServerResource {
 	private void sendNotification(VirtualServer virtualServer, VirtualServerStatus oldStatus, VirtualServerStatus newStatus) throws Exception
 	{
 		URI notification = virtualServer.getNotification();
-		logger.info("SendNotification to <" + notification + "> from " + virtualServer.getUri() + " old: " + oldStatus + " new: " + virtualServer.getStatus());
-
 		if (notification == null)
 			return;
-
+		logger.info("SendNotification to <" + notification + "> from " + virtualServer.getUri() + " old: " + oldStatus + " new: " + virtualServer.getStatus());
 		try{
 			if (client == null)
 			{
