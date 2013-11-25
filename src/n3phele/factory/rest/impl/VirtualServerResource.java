@@ -466,12 +466,12 @@ public class VirtualServerResource {
 	@Produces({ "application/json" })
 	@Path("virtualServer/{id}")
 	@RolesAllowed("authenticated")
-	public URI get(@PathParam("id") Long id, String notification) throws NotFoundException
+	public String get(@PathParam("id") Long id, String notification) throws NotFoundException
 	{
 		logger.info("Update notification URI ("+notification+") for vm with id "+id);
 
 		URI result = updateNotificationURL(id, URI.create(notification));
-		return result;
+		return result!=null?result.toString():"";
 	}
 
 	/** Kill the nominated virtual server
