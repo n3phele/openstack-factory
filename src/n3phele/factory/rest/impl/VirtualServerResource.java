@@ -545,7 +545,7 @@ public class VirtualServerResource {
 			deleteInstance(virtualServer);
 		} catch (Exception e)
 		{
-			manager.delete(virtualServer);
+			delete(virtualServer);
 		}
 	}
 	
@@ -568,7 +568,7 @@ public class VirtualServerResource {
 			}
 		} catch (Exception e)
 		{
-			manager.delete(virtualServer);
+			terminate(virtualServer);
 		}
 	}
 
@@ -845,7 +845,8 @@ public class VirtualServerResource {
 	
 	private Collection<VirtualServer> getNonTerminatedServers()
 	{
-		return manager.getNotTerminatedMachines();	
+		//return manager.getNotTerminatedMachines();
+		return manager.getCollection();
 	}
 
 	private Collection<BaseEntity> refreshCollection()
