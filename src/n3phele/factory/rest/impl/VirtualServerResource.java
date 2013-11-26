@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.logging.Level;
 
 import javax.annotation.security.RolesAllowed;
 import javax.mail.Message;
@@ -53,6 +54,7 @@ import n3phele.factory.hpcloud.HPCloudManager;
 import n3phele.factory.model.ServiceModelDao;
 import n3phele.factory.strategy.DebugStrategy;
 import n3phele.factory.strategy.ZombieStrategy;
+import n3phele.service.core.ForbiddenException;
 import n3phele.service.core.NotFoundException;
 import n3phele.service.core.Resource;
 import n3phele.service.model.core.AbstractManager;
@@ -73,8 +75,6 @@ import org.jclouds.openstack.nova.v2_0.domain.KeyPair;
 import org.jclouds.openstack.nova.v2_0.domain.SecurityGroup;
 import org.jclouds.openstack.nova.v2_0.domain.Server;
 import org.jclouds.openstack.nova.v2_0.domain.ServerCreated;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.apphosting.api.DeadlineExceededException;
 import com.googlecode.objectify.Key;
@@ -95,7 +95,8 @@ public class VirtualServerResource {
 	private final static VirtualServerManager	manager = new VirtualServerManager();
 	
 	public final static String FACTORY_NAME	= "nova-factory";
-	final Logger logger = LoggerFactory.getLogger(VirtualServerResource.class);
+	final protected static java.util.logging.Logger logger = java.util.logging.Logger.getLogger(VirtualServerResource.class.getName());
+
 	
 	private ZombieStrategy zombieStrategy;
 	private DebugStrategy debugStrategy;
@@ -203,7 +204,7 @@ public class VirtualServerResource {
 	@Produces("application/json")
 	@RolesAllowed("authenticated")
 	@Path("virtualServer")
-	public Response create(ExecutionFactoryCreateRequest request) throws Exception, InvalidParameterException
+	public Response create(ExecutionFactoryCreateRequest request) throws Exception, InvalidParameterException, ForbiddenException
 	{
 		HPCloudCreateServerRequest hpCloudRequest = fillWithRequest(request);
 
@@ -249,7 +250,7 @@ public class VirtualServerResource {
 		NodeMetadataImpl serverImpl = hpCloudManager.getServerByIP(request.locationId, request.ipaddress);
 		
 		if(serverImpl == null){
-			logger.warn("IP Adress not found on cloud");
+			logger.warning("IP Adress not found on cloud");
 			return Response.status(Response.Status.NOT_FOUND).build();
 		}
 				
@@ -261,7 +262,7 @@ public class VirtualServerResource {
 		
 		List<VirtualServer> list = getByInstanceId(instanceId);
 		if(list.size() > 0){
-			logger.warn("VM already exists on factory");
+			logger.warning("VM already exists on factory");
 			return Response.status(Response.Status.CONFLICT).build();
 		}
 		logger.info("Retrieved list");
@@ -271,7 +272,7 @@ public class VirtualServerResource {
 		 */
 		Server server = hpCloudManager.getServerById(zone, instanceId);
 		if(server == null){
-			logger.warn("Error retrieving VM from cloud");
+			logger.warning("Error retrieving VM from cloud");
 			return Response.status(Response.Status.NOT_FOUND).build();
 		}
 		
@@ -317,7 +318,7 @@ public class VirtualServerResource {
 
 	protected ArrayList<VirtualServer> createOneOrMoreVMs(
 			ExecutionFactoryCreateRequest request,
-			HPCloudCreateServerRequest hpCloudRequest, Date epoch) {
+			HPCloudCreateServerRequest hpCloudRequest, Date epoch) throws ForbiddenException{
 			
 		boolean createdFromZombie = false;
 		
@@ -330,7 +331,7 @@ public class VirtualServerResource {
 			
 			createdFromZombie = createWithZombie(tempVirtualServer);
 			if(createdFromZombie) {
-				logger.info("Only one zombie virtualServer");
+				logger.info("Created VM from zombie virtualServer");
 				virtualServerList = new ArrayList<VirtualServer>(1);					
 				virtualServerList.add(tempVirtualServer);			
 			}
@@ -338,7 +339,13 @@ public class VirtualServerResource {
 		
 		if( !createdFromZombie ) {
 			HPCloudManager hpCloudManager = getNewHPCloudManager(request.accessKey, request.encryptedSecret);
-			List<ServerCreated> resultServerList = hpCloudManager.createServerRequest(hpCloudRequest);
+			List<ServerCreated> resultServerList;
+			try {
+				resultServerList = hpCloudManager.createServerRequest(hpCloudRequest);
+			} catch (Exception e) {
+				logger.log(Level.SEVERE,"VM create failure ", e);
+				throw new ForbiddenException(e.getMessage());
+			}
 			virtualServerList = new ArrayList<VirtualServer>(resultServerList.size());
 			
 			for (ServerCreated server : resultServerList) {
@@ -577,7 +584,7 @@ public class VirtualServerResource {
 		}
 		catch(Exception e)
 		{
-			logger.error("makeZombie delete of instanceId " + instanceId, e);
+			logger.log(Level.SEVERE, "makeZombie delete of instanceId " + instanceId, e);
 			virtualServer.setInstanceId(instanceId);
 			deleteInstance(virtualServer);
 			throw e;
@@ -593,7 +600,7 @@ public class VirtualServerResource {
 			debugStrategy.makeDebug(virtualServer, this, getNewHPCloudManager(virtualServer.getAccessKey(), virtualServer.getEncryptedKey()));
 		} catch (Exception e)
 		{
-			logger.error("makeDebug delete of instanceId "	+ instanceId, e);
+			logger.log(Level.SEVERE, "makeDebug delete of instanceId "	+ instanceId, e);
 			virtualServer.setInstanceId(instanceId);
 			deleteInstance(virtualServer);
 			throw e;
@@ -725,15 +732,12 @@ public class VirtualServerResource {
 					delete(virtualServer);
 					return false;
 				}
-			} else
-			{
+			} else {
 				logger.info("Instance " + virtualServer.getInstanceId() + " not found, assumed terminated .. purging");
 				delete(virtualServer);
 				return false;
 			}
-		} else {
-			
-		}
+		} 
 		return true;
 	}
 	
@@ -835,21 +839,14 @@ public class VirtualServerResource {
 		return false;
 	}
 
-	protected HPCloudManager getNewHPCloudManager(String acessKey, String encryptedKey)
-	{
+	protected HPCloudManager getNewHPCloudManager(String acessKey, String encryptedKey) {
 		HPCloudManager hpCloudManager = new HPCloudManager(getNewHPCredentials(acessKey, encryptedKey));
 		return hpCloudManager;
 	}
-	
-	private Collection<VirtualServer> getNonTerminatedServers()
-	{
-		//return manager.getNotTerminatedMachines();
-		return manager.getCollection();
-	}
 
 	private Collection<BaseEntity> refreshCollection() {
-		Collection<VirtualServer> servers = getNonTerminatedServers();
-		logger.info("Refreshing collection of non terminated virtual servers. Current size: "
+		Collection<VirtualServer> servers = getCollection();
+		logger.info("Refreshing collection of virtual servers. Current size: "
 				+ servers.getElements().size());
 
 		Collection<BaseEntity> result = servers.collection(true);
@@ -863,7 +860,10 @@ public class VirtualServerResource {
 					if (virtualServer.getUri() != null) {
 						if(virtualServer.getInstanceId() == null || virtualServer.getInstanceId().length() == 0) {
 							delete(virtualServer);
-							logger.error("Clean up of "+virtualServer);
+							logger.severe("Clean up of "+virtualServer);
+						} else if(virtualServer.getStatus() == VirtualServerStatus.pending) {
+							// zombie vm is in the process of getting claimed. Ignore
+							logger.info("Found reclaimed zombie .. ignoring");
 						} else if(!checkForZombieAndDebugExpiry(virtualServer)) {
 							String accessKey2 = virtualServer.getAccessKey();
 							String encryptedKey2 = virtualServer.getEncryptedKey();
@@ -881,7 +881,7 @@ public class VirtualServerResource {
 						}
 					} 
 				} catch (Exception e) {
-					logger.warn(" refresh failed. Killing..", e);
+					logger.log(Level.WARNING," refresh failed. Killing..", e);
 					try {
 						terminate(virtualServer);
 					} catch (Exception another) {
@@ -911,7 +911,7 @@ public class VirtualServerResource {
 
 				if (locationId == null)
 				{
-					logger.error("locationId is null, cannot delete instance "	+ virtualServer.getInstanceId(), new IllegalArgumentException("locationId: null"));
+					logger.log(Level.SEVERE,"locationId is null, cannot delete instance "	+ virtualServer.getInstanceId(), new IllegalArgumentException("locationId: null"));
 					throw new IllegalArgumentException("locationId: null");
 				}
 
@@ -925,7 +925,7 @@ public class VirtualServerResource {
 					
 				} else
 				{
-					logger.warn("Instance " + virtualServer.getInstanceId() + "could not be deleted");
+					logger.warning("Instance " + virtualServer.getInstanceId() + "could not be deleted");
 				}
 			}
 			else
@@ -936,7 +936,7 @@ public class VirtualServerResource {
 
 		} catch (Exception e)
 		{
-			logger.error("Cleanup delete of instanceId " + instanceId, e);
+			logger.log(Level.SEVERE,"Cleanup delete of instanceId " + instanceId, e);
 			throw e;
 		}
 
@@ -995,6 +995,7 @@ public class VirtualServerResource {
 							continue;
 						}
 						
+						virtualServer.setStatus(VirtualServerStatus.pending);
 						virtualServer.setInstanceId(zombieVirtualServer.getInstanceId());
 						virtualServer.setCreated(zombieVirtualServer.getCreated());
 						
@@ -1037,7 +1038,7 @@ public class VirtualServerResource {
 					}
 			 });
 		} catch (NotFoundException e) {
-			logger.warn("Zombie contention on " + zombieId);
+			logger.warning("Zombie contention on " + zombieId);
 			claimed = false;
 		}
 		return claimed;
@@ -1067,7 +1068,7 @@ public class VirtualServerResource {
 			sendNotification(virtualServer, oldStatus, newStatus);
 		} catch (Exception e)
 		{
-			logger.info("SendNotification exception to <" + virtualServer.getNotification() + "> from " + virtualServer.getUri() + " old: " + oldStatus + " new: " + virtualServer.getStatus(), e);
+			logger.log(Level.INFO,"SendNotification exception to <" + virtualServer.getNotification() + "> from " + virtualServer.getUri() + " old: " + oldStatus + " new: " + virtualServer.getStatus(), e);
 		}
 		return true;
 	}
@@ -1095,7 +1096,7 @@ public class VirtualServerResource {
 				deleteInstance(virtualServer);
 			}
 		}catch(Exception e){
-			logger.warn(e.getMessage());
+			logger.warning(e.getMessage());
 		}
 	}
 
@@ -1118,7 +1119,7 @@ public class VirtualServerResource {
 			return true;
 		}
 
-		logger.error("Key pair couldn't be created");
+		logger.severe("Key pair couldn't be created");
 		return false;
 	}
 
@@ -1160,16 +1161,16 @@ public class VirtualServerResource {
 
 		} catch (AddressException e)
 		{
-			logger.error("Email to " + to, e);
+			logger.log(Level.SEVERE,"Email to " + to, e);
 		} catch (MessagingException e)
 		{
-			logger.error("Email to " + to, e);
+			logger.log(Level.SEVERE,"Email to " + to, e);
 		} catch (UnsupportedEncodingException e)
 		{
-			logger.error( "Email to " + to, e);
+			logger.log(Level.SEVERE, "Email to " + to, e);
 		} catch (Exception e)
 		{
-			logger.error( "Email to " + to, e);
+			logger.log(Level.SEVERE, "Email to " + to, e);
 		}
 	}
 
@@ -1211,16 +1212,16 @@ public class VirtualServerResource {
 
 		} catch (AddressException e)
 		{
-			logger.error( "Email to " + to, e);
+			logger.log(Level.SEVERE,"Email to " + to, e);
 		} catch (MessagingException e)
 		{
-			logger.error( "Email to " + to, e);
+			logger.log(Level.SEVERE,"Email to " + to, e);
 		} catch (UnsupportedEncodingException e)
 		{
-			logger.error("Email to " + to, e);
+			logger.log(Level.SEVERE,"Email to " + to, e);
 		} catch (Exception e)
 		{
-			logger.error("Email to " + to, e);
+			logger.log(Level.SEVERE,"Email to " + to, e);
 		}
 
 	}
