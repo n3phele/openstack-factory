@@ -221,8 +221,7 @@ public class VirtualServerResource {
 		//get URIs for siblings and pass to VMs
 		//FIXME siblings have the same info as virtualMachineRefs, but are Strings. Maybe we can use only one of them.
 		siblings = new ArrayList<String>(virtualServerList.size());
-		for(VirtualServer virtualServer : virtualServerList)
-		{
+		for(VirtualServer virtualServer : virtualServerList) {
 			siblings.add(virtualServer.getUri().toString());
 		}
 		
@@ -324,29 +323,25 @@ public class VirtualServerResource {
 		
 		ArrayList<VirtualServer> virtualServerList = null;
 		
-		if(hpCloudRequest.nodeCount == 1)
-		{
+		if(hpCloudRequest.nodeCount == 1) {
 			VirtualServer tempVirtualServer = new VirtualServer(request.name, request.description, request.location, request.parameters,
 					request.notification, request.accessKey, request.encryptedSecret,
 					request.owner, request.idempotencyKey);
 			
 			createdFromZombie = createWithZombie(tempVirtualServer);
-			if(createdFromZombie)
-			{
+			if(createdFromZombie) {
 				logger.info("Only one zombie virtualServer");
 				virtualServerList = new ArrayList<VirtualServer>(1);					
 				virtualServerList.add(tempVirtualServer);			
 			}
 		}
 		
-		if( !createdFromZombie )
-		{
-			HPCloudManager hpCloudManager 			= getNewHPCloudManager(request.accessKey, request.encryptedSecret);
-			List<ServerCreated> resultServerList	= hpCloudManager.createServerRequest(hpCloudRequest);
-			virtualServerList 						= new ArrayList<VirtualServer>(resultServerList.size());
+		if( !createdFromZombie ) {
+			HPCloudManager hpCloudManager = getNewHPCloudManager(request.accessKey, request.encryptedSecret);
+			List<ServerCreated> resultServerList = hpCloudManager.createServerRequest(hpCloudRequest);
+			virtualServerList = new ArrayList<VirtualServer>(resultServerList.size());
 			
-			for (ServerCreated server : resultServerList)
-			{
+			for (ServerCreated server : resultServerList) {
 				VirtualServer virtualServer = new VirtualServer(server.getName(), request.description, request.location,
 														request.parameters, request.notification, request.accessKey,
 														request.encryptedSecret, request.owner, request.idempotencyKey);
@@ -736,6 +731,8 @@ public class VirtualServerResource {
 				delete(virtualServer);
 				return false;
 			}
+		} else {
+			
 		}
 		return true;
 	}
@@ -849,45 +846,48 @@ public class VirtualServerResource {
 		return manager.getCollection();
 	}
 
-	private Collection<BaseEntity> refreshCollection()
-	{
-		Collection<VirtualServer> servers	= getNonTerminatedServers();
-		logger.info("Refreshing collection of non terminated virtual servers. Current size: " + servers.getElements().size());
-		
-		
-		Collection<BaseEntity> result 		= servers.collection(true);
-		HPCloudManager hpCloudManager 		= null;
-		String accessKey					= null;
-		String encryptedKey					= null;
-		
+	private Collection<BaseEntity> refreshCollection() {
+		Collection<VirtualServer> servers = getNonTerminatedServers();
+		logger.info("Refreshing collection of non terminated virtual servers. Current size: "
+				+ servers.getElements().size());
+
+		Collection<BaseEntity> result = servers.collection(true);
+		HPCloudManager hpCloudManager = null;
+		String accessKey = null;
+		String encryptedKey = null;
+
 		try {
 			for (VirtualServer virtualServer : servers.getElements()) {
-	
-					try {
-						if(virtualServer.getUri() != null && !checkForZombieAndDebugExpiry(virtualServer))
-						{
-							String accessKey2		= virtualServer.getAccessKey();
-							String encryptedKey2	= virtualServer.getEncryptedKey();
-							if(hpCloudManager == null || !accessKey.equalsIgnoreCase(accessKey2)  || !encryptedKey.equalsIgnoreCase(encryptedKey2))
-							{
+				try {
+					if (virtualServer.getUri() != null) {
+						if(!checkForZombieAndDebugExpiry(virtualServer)) {
+							String accessKey2 = virtualServer.getAccessKey();
+							String encryptedKey2 = virtualServer.getEncryptedKey();
+							if (hpCloudManager == null
+									|| !accessKey.equalsIgnoreCase(accessKey2)
+									|| !encryptedKey.equalsIgnoreCase(encryptedKey2)) {
 								logger.info("-------refreshCollection-- creating a new HPCloudManager");
-								hpCloudManager 	= getNewHPCloudManager(virtualServer.getAccessKey(), virtualServer.getEncryptedKey());
-								accessKey 		= accessKey2;
-								encryptedKey 	= encryptedKey2;
+								hpCloudManager = getNewHPCloudManager(
+										virtualServer.getAccessKey(),
+										virtualServer.getEncryptedKey());
+								accessKey = accessKey2;
+								encryptedKey = encryptedKey2;
 							}
 							updateVirtualServer(virtualServer, hpCloudManager);
 						}
+					} else {
+						delete(virtualServer);
 					}
-					catch (Exception e) {
-						logger.warn( " refresh failed. Killing..",e);
-						try {
-							terminate(virtualServer);
-						} catch (Exception another) {
-							
-						} finally {
-							delete(virtualServer);
-						}
+				} catch (Exception e) {
+					logger.warn(" refresh failed. Killing..", e);
+					try {
+						terminate(virtualServer);
+					} catch (Exception another) {
+
+					} finally {
+						delete(virtualServer);
 					}
+				}
 			}
 		} catch (DeadlineExceededException deadline) {
 			return result;
