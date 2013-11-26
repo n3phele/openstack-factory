@@ -65,10 +65,12 @@
 			<param-name>com.sun.jersey.spi.container.ResourceFilters</param-name>
 			<param-value>com.sun.jersey.api.container.filter.RolesAllowedResourceFilterFactory</param-value>
 		</init-param>
+		<!--   Uncomment to turn on reply logging
 		<init-param>
 		  <param-name>com.sun.jersey.spi.container.ContainerResponseFilters</param-name>
 		  <param-value>com.sun.jersey.api.container.filter.LoggingFilter</param-value>
 		</init-param>
+		-->
 		<load-on-startup>1</load-on-startup>
 	</servlet>
 	<servlet-mapping>
