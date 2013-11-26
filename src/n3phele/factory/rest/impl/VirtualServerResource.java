@@ -821,7 +821,7 @@ public class VirtualServerResource {
 			long now 		= new Date().getTime();
 			long age 		= ((now - created)% (60*60*1000))/60000;
 			
-			logger.info("Reaper checking expired="+(age > zombieStrategy.getMinutesExpirationTime())+" debug="+isDebugInstance+" zombie="+isZombieInstance);
+			logger.info("Reaper checking "+virtualServer.getName()+" with id "+virtualServer.getInstanceId()+" expired="+(age > zombieStrategy.getMinutesExpirationTime())+" debug="+isDebugInstance+" zombie="+isZombieInstance);
 			if( (age > zombieStrategy.getMinutesExpirationTime() && (isDebugInstance || isZombieInstance) ) )
 			{
 				logger.info("Killing "+virtualServer.getName()+" with id "+virtualServer.getInstanceId()+" created "+virtualServer.getCreated() );
