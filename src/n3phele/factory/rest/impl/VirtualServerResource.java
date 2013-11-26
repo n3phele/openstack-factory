@@ -860,7 +860,10 @@ public class VirtualServerResource {
 			for (VirtualServer virtualServer : servers.getElements()) {
 				try {
 					if (virtualServer.getUri() != null) {
-						if(!checkForZombieAndDebugExpiry(virtualServer)) {
+						if(virtualServer.getInstanceId() == null || virtualServer.getInstanceId().length() == 0) {
+							delete(virtualServer);
+							logger.error("Clean up of "+virtualServer);
+						} else if(!checkForZombieAndDebugExpiry(virtualServer)) {
 							String accessKey2 = virtualServer.getAccessKey();
 							String encryptedKey2 = virtualServer.getEncryptedKey();
 							if (hpCloudManager == null
@@ -875,9 +878,7 @@ public class VirtualServerResource {
 							}
 							updateVirtualServer(virtualServer, hpCloudManager);
 						}
-					} else {
-						delete(virtualServer);
-					}
+					} 
 				} catch (Exception e) {
 					logger.warn(" refresh failed. Killing..", e);
 					try {
