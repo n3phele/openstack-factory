@@ -2,6 +2,7 @@
 <classpath>
 	<classpathentry kind="src" path="test"/>
 	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/commons-io-2.4.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7">
 		<attributes>
 			<attribute name="owner.project.facets" value="java"/>
@@ -10,7 +11,6 @@
 	<classpathentry kind="con" path="com.google.appengine.eclipse.core.GAE_CONTAINER/v1"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/aopalliance-1.0.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/appengine-api-1.0-sdk-1.8.9.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/appengine-api-labs.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/appengine-endpoints-deps.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/appengine-endpoints.jar"/>
@@ -18,17 +18,15 @@
 	<classpathentry kind="lib" path="war/WEB-INF/lib/asm-4.0.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/aws-ec2-1.7.0.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/bcprov-jdk16-1.46.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/commons-io-2.4.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/datanucleus-api-jdo-3.1.0-m3.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/datanucleus-api-jpa-3.1.0-m3.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/datanucleus-appengine-1.0.10.final.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/datanucleus-core-1.1.5.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/datanucleus-jpa-1.1.5.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/ec2-1.7.0.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/geronimo-jpa_3.0_spec-1.1.1.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/geronimo-jta_1.1_spec-1.1.1.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/gson-2.2.4.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/guava-16.0.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/objectify-4.0rc2.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/guice-3.0.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/guice-assistedinject-3.0.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/gwt-servlet.jar"/>
@@ -67,7 +65,6 @@
 	<classpathentry kind="lib" path="war/WEB-INF/lib/mysql-connector-java-5.1.25.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/n3phele.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/netty-3.5.9.Final.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/objectify-4.0rc2.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/openstack-cinder-1.7.0.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/openstack-common-1.7.0.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/openstack-glance-1.7.0.jar"/>
@@ -97,5 +94,6 @@
 	<classpathentry kind="lib" path="testlibs/mockito-all-1.9.5.jar"/>
 	<classpathentry kind="lib" path="testlibs/powermock-mockito-1.5-full.jar"/>
 	<classpathentry kind="lib" path="testlibs/servlet-api-2.5.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/guava-15.0.jar"/>
 	<classpathentry kind="output" path="war/WEB-INF/classes"/>
 </classpath>
