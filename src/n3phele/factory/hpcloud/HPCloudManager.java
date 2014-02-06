@@ -7,16 +7,16 @@ import java.util.Map;
 import java.util.Set;
 
 import n3phele.factory.rest.impl.VirtualServerResource;
-
 import org.jclouds.compute.ComputeService;
 import org.jclouds.compute.domain.ComputeMetadata;
 import org.jclouds.compute.domain.Hardware;
 import org.jclouds.compute.domain.internal.NodeMetadataImpl;
 import org.jclouds.domain.Location;
+import org.jclouds.net.domain.IpProtocol;
 import org.jclouds.openstack.nova.v2_0.NovaApi;
 import org.jclouds.openstack.nova.v2_0.domain.Image;
 import org.jclouds.openstack.nova.v2_0.domain.Ingress;
-import org.jclouds.openstack.nova.v2_0.domain.IpProtocol;
+//import org.jclouds.openstack.nova.v2_0.domain.IpProtocol;
 import org.jclouds.openstack.nova.v2_0.domain.KeyPair;
 import org.jclouds.openstack.nova.v2_0.domain.RebootType;
 import org.jclouds.openstack.nova.v2_0.domain.SecurityGroup;

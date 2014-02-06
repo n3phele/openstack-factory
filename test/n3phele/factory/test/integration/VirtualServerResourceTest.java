@@ -87,7 +87,7 @@ public class VirtualServerResourceTest {
 		form.add("locationId", "az-1.region-a.geo-1");
 		form.add("firstName", "User");
 		form.add("lastName", "LastName");
-		form.add("securityGroup", "default-lis");
+		form.add("securityGroup", "default");
 		form.add("email", "test@cpca.pucrs.br");
 
 		ClientResponse result = resource.post(ClientResponse.class, form);		
@@ -126,7 +126,7 @@ public class VirtualServerResourceTest {
 	
 	@Test
 	public void testAssimilateVM() throws UnsupportedEncodingException, NoSuchAlgorithmException, URISyntaxException {
-		WebResource resource =  webResource.path("/");
+		WebResource resource =  webResource.path("/assimilate");
 
 		String accessId = EncryptedHPCredentials.encryptX(testResource.get("testAccessId", ""), "password");
 		String secret = EncryptedHPCredentials.encryptX(testResource.get("testAccessKey", ""), "password");
