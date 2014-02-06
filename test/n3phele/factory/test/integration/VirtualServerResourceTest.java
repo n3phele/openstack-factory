@@ -137,7 +137,7 @@ public class VirtualServerResourceTest {
 		request.encryptedSecret 	= secret;
 		request.location 			= new URI("https://az-1.region-a.geo-1.compute.hpcloudsvc.com/v1.1/12365734013392");
 		request.description 		= "description";
-		request.name 				= "testing";
+		request.name 				= "";
 		request.owner 				= new URI("http://localhost/");
 		request.locationId			= "az-1.region-a.geo-1";
 		request.ipaddress			= "";
