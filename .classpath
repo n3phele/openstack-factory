@@ -2,7 +2,6 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="src" path="test"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/jre6"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jclouds-blobstore-1.5.7.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jclouds-bouncycastle-1.5.7.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jclouds-compute-1.5.7.jar"/>
@@ -65,15 +64,33 @@
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jdo2-api-2.3-eb.jar"/>
 	<classpathentry kind="lib" path="testlibs/powermock-mockito-1.5-full.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/n3phele.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/datanucleus-api-jdo-3.1.0-m3.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/datanucleus-api-jpa-3.1.0-m3.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/datanucleus-appengine-2.1.0-final.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/datanucleus-core-3.1.0-m5.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/appengine-endpoints.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/appengine-jsr107cache-1.7.5.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/asm-4.0.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/geronimo-jpa_2.0_spec-1.0.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/jdo-api-3.0.1.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/jersey-server-1.12.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/jsr107cache-1.1.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/jta-1.1.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/jersey-servlet-1.12.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jersey-bundle-1.17.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/asm-3.3.1.jar"/>
-	<classpathentry kind="con" path="com.google.appengine.eclipse.core.GAE_CONTAINER"/>
 	<classpathentry kind="lib" path="testlibs/jersey-test-framework-core-1.17.jar"/>
 	<classpathentry kind="lib" path="testlibs/jersey-test-framework-grizzly-1.17.jar"/>
 	<classpathentry kind="lib" path="testlibs/servlet-api-2.5.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jackson-all-1.9.11.jar"/>
 	<classpathentry kind="lib" path="testlibs/appengine-api-stubs.jar"/>
 	<classpathentry kind="lib" path="testlibs/appengine-testing.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7">
+		<attributes>
+			<attribute name="owner.project.facets" value="java"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="con" path="com.google.appengine.eclipse.core.GAE_CONTAINER/appengine-java-sdk-1.7.5"/>
 	<classpathentry kind="output" path="war/WEB-INF/classes"/>
 </classpath>
