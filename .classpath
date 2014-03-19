@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7">
+		<attributes>
+			<attribute name="owner.project.facets" value="java"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="con" path="com.google.appengine.eclipse.core.GAE_CONTAINER/appengine-java-sdk-1.7.5"/>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="src" path="test"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jclouds-blobstore-1.5.7.jar"/>
@@ -30,6 +36,7 @@
 	<classpathentry kind="lib" path="war/WEB-INF/lib/openstack-common-1.5.7.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/openstack-keystone-1.5.7.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/openstack-nova-1.5.7.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/objectify-4.0b1.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/sshj-0.8.1.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/swift-1.5.7.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/rocoto-6.1.jar"/>
@@ -59,7 +66,6 @@
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jdo2-api-2.3-eb.jar"/>
 	<classpathentry kind="lib" path="testlibs/powermock-mockito-1.5-full.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/n3phele.jar"/>
-<<<<<<< HEAD
 	<classpathentry kind="lib" path="war/WEB-INF/lib/datanucleus-api-jdo-3.1.0-m3.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/datanucleus-api-jpa-3.1.0-m3.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/datanucleus-appengine-2.1.0-final.jar"/>
@@ -73,12 +79,11 @@
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jsr107cache-1.1.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jta-1.1.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jersey-servlet-1.12.jar"/>
-=======
-	<classpathentry kind="lib" path="war/WEB-INF/lib/objectify-4.0rc2.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/guava-15.0.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/guava-13.0.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jclouds-slf4j-1.5.7.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/slf4j-api-1.6.4.jar"/>
->>>>>>> 743ea40f8d2041954fc1bb41d990a6f5d5e1ab36
+	<classpathentry kind="lib" path="war/WEB-INF/lib/slf4j-simple-1.7.4.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/gwt-servlet.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jersey-bundle-1.17.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/asm-3.3.1.jar"/>
@@ -88,15 +93,5 @@
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jackson-all-1.9.11.jar"/>
 	<classpathentry kind="lib" path="testlibs/appengine-api-stubs.jar"/>
 	<classpathentry kind="lib" path="testlibs/appengine-testing.jar"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7">
-		<attributes>
-			<attribute name="owner.project.facets" value="java"/>
-		</attributes>
-	</classpathentry>
-<<<<<<< HEAD
-	<classpathentry kind="con" path="com.google.appengine.eclipse.core.GAE_CONTAINER/appengine-java-sdk-1.7.5"/>
-=======
-	<classpathentry kind="con" path="com.google.appengine.eclipse.core.GAE_CONTAINER"/>
->>>>>>> 743ea40f8d2041954fc1bb41d990a6f5d5e1ab36
 	<classpathentry kind="output" path="war/WEB-INF/classes"/>
 </classpath>
